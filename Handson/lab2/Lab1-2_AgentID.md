@@ -204,10 +204,16 @@ az account show
 
 **エージェント フォルダー [agent-custom-MAF-ACA-A365](agent-custom-MAF-ACA-A365/) で実行する**（**3〜5 分**かかる）。`a365 setup all` は**カレント ディレクトリ**に `a365.generated.config.json` を生成し、`.env`（§4.3）も同じ場所へスタンプするため、§3 のビルド/デプロイと同じ agent フォルダーで実行する。
 
+> **受講者は 12 人（user01〜user12）。エージェント名はテナント内で一意である必要がある**ため、`--agent-name` に**自分の受講者識別子をサフィックス**として付ける（例: `custom-maf-agent-a365-user01`）。これで Blueprint 登録・Agent Identity・Azure リソース名が受講者ごとに衝突しない。以降の手順に出てくる `custom-maf-agent-a365` も、自分のサフィックス付き名（`custom-maf-agent-a365-userNN`）に読み替えること。
+
 ```powershell
 cd C:\GitHub\Agent365-Onboarding\_report\Handson\lab2\agent-custom-MAF-ACA-A365
-# config 不要モード（エージェント）。本ラボの実エージェント名:
-a365 setup all --agent-name custom-maf-agent-a365
+
+# 受講者識別子（user01〜user12 のうち自分のもの）をここで指定
+$me = "user01"   # ← 自分の番号に変更（user01〜user12）
+
+# config 不要モード（エージェント）。受講者ごとに一意なエージェント名で実行:
+a365 setup all --agent-name "custom-maf-agent-a365-$me"
 ```
 
 `a365 setup all` が一括で行うこと:
