@@ -104,10 +104,10 @@
 >
 > ```powershell
 > cd Handson/lab2/agent-custom-MAF-ACA-A365
-> ./new-env.ps1 -Me user01        # 例: user01。§3 の前に実行
+> ./new-env.ps1 -Me userNN        # userNN は自分の番号に置き換える（例 user01）。§3 の前に実行
 > ```
 >
-> Agent ID 値（`CLIENTID`/`CLIENTSECRET`/`AGENT_ID`/`AGENT365OBSERVABILITY__*`）は §4.2 の `a365 setup all` で `a365.generated.config.json` が出来てから埋まる。**§4.2 実行後にもう一度** `./new-env.ps1 -Me user01 -Force` を回すと、生成 config（DPAPI 保護シークレットを含む）から自動補完される。手で編集する場合は下表を参照。
+> Agent ID 値（`CLIENTID`/`CLIENTSECRET`/`AGENT_ID`/`AGENT365OBSERVABILITY__*`）は §4.2 の `a365 setup all` で `a365.generated.config.json` が出来てから埋まる。**§4.2 実行後にもう一度** `./new-env.ps1 -Me userNN -Force`（同じ番号）を回すと、生成 config（DPAPI 保護シークレットを含む）から自動補完される。手で編集する場合は下表を参照。
 
 | キー | 値 |
 |---|---|
@@ -156,7 +156,7 @@ pwsh -NoProfile -File ./deploy-aca.ps1
 
 ```powershell
 # §3.2 の出力にある自分の App URL（受講者ごとに異なる）を入れる
-$app = "https://custom-maf-agent-a365-user01.<自分のサブドメイン>.eastus2.azurecontainerapps.io"
+$app = "https://custom-maf-agent-a365-userNN.<自分のサブドメイン>.eastus2.azurecontainerapps.io"
 
 # ヘルス
 curl "$app/healthz"
