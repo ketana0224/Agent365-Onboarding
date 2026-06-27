@@ -11,7 +11,11 @@
     AGENT_IDENTITY_APP_ID   … lab2-3 generated config の agenticAppId
     BLUEPRINT_CLIENT_SECRET … agentBlueprintClientSecret を DPAPI(CurrentUser) 復号
     USE_AGENT_ID_EGRESS     … true（lab3-1 で出口を Agent ID に差し替える）
+    ACA_RESOURCE_GROUP      … rg-<Me>（受講者ごとに分離）
+    ACA_APP_NAME            … custom-maf-agent-a365-egress-<Me>
+    ACA_ENV_NAME            … aca-contoso-agent-<Me>
 
+  ACA 名は受講者間で衝突しないよう -Me（userNN）でサフィックス化する。
   Blueprint シークレットは DPAPI(CurrentUser) 暗号化のため、a365 setup all を実行した
   のと同じ Windows ユーザーでのみ復号できる。
 
@@ -21,11 +25,15 @@
   - 既存 .env がある場合は -Force で上書き。
 
 .EXAMPLE
-  pwsh .\prepare-env.ps1
-  pwsh .\prepare-env.ps1 -Force
+  pwsh .\prepare-env.ps1 -Me user01
+  pwsh .\prepare-env.ps1 -Me user01 -Force
 #>
 [CmdletBinding()]
 param(
+    # 受講者識別子（userNN）。ACA 名を -userNN でサフィックス化して受講者間の衝突を防ぐ
+    [Parameter(Mandatory)]
+    [ValidatePattern('^user\d{2}$')]
+    [string]$Me,
     # lab2-3 で a365 setup all を実行した lab2 の config ディレクトリ
     [string]$SourceDir = (Join-Path $PSScriptRoot '..\..\lab2'),
     # 入力テンプレート / 出力先
@@ -40,7 +48,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Security
 
-Write-Host '== agent-custom-MAF-ACA-A365-egress 用 .env を生成 ==' -ForegroundColor Cyan
+Write-Host "== agent-custom-MAF-ACA-A365-egress 用 .env を生成 ($Me) ==" -ForegroundColor Cyan
 
 if (-not (Test-Path $ExampleFile)) { throw ".env.example が見つかりません: $ExampleFile" }
 if ((Test-Path $OutFile) -and -not $Force) {
@@ -91,8 +99,13 @@ if (-not $SubscriptionId -or -not $TenantId) {
 }
 
 # --- 3. 差し込む値（USE_AGENT_ID_EGRESS は lab3-1 では true 固定）-------------
+# ACA 名は受講者ごとに分離（lab2 と同じ rg-<Me> / aca-contoso-agent-<Me> を再利用し、
+# egress 版は app 名で区別する）。
 $overrides = @{
     'USE_AGENT_ID_EGRESS' = 'true'
+    'ACA_RESOURCE_GROUP'  = "rg-$Me"
+    'ACA_APP_NAME'        = "custom-maf-agent-a365-egress-$Me"
+    'ACA_ENV_NAME'        = "aca-contoso-agent-$Me"
 }
 if ($TenantId)       { $overrides['AZURE_TENANT_ID']        = $TenantId }
 if ($SubscriptionId) { $overrides['AZURE_SUBSCRIPTION_ID']  = $SubscriptionId }
@@ -130,6 +143,9 @@ Write-Host "  BLUEPRINT_APP_ID       : $(if ($BlueprintAppId) { $BlueprintAppId 
 Write-Host "  AGENT_IDENTITY_APP_ID  : $(if ($AgentIdAppId) { $AgentIdAppId } else { '<空・要手入力>' })"
 Write-Host "  BLUEPRINT_CLIENT_SECRET: $(if ($overrides.ContainsKey('BLUEPRINT_CLIENT_SECRET')) { '<復号済み・非表示>' } else { '<空・要手入力>' })"
 Write-Host "  USE_AGENT_ID_EGRESS    : true（lab3-1 で出口を Agent ID に差し替える）" -ForegroundColor DarkGray
+Write-Host "  ACA_RESOURCE_GROUP     : rg-$Me"
+Write-Host "  ACA_APP_NAME           : custom-maf-agent-a365-egress-$Me"
+Write-Host "  ACA_ENV_NAME           : aca-contoso-agent-$Me"
 Write-Host ""
 Write-Host "PROJECT_ENDPOINT / MODEL_DEPLOYMENT_NAME は APIM 経由のため空のままで構いません（切り戻し用）。" -ForegroundColor DarkGray
 Write-Host "次に: pwsh .\deploy-aca.ps1" -ForegroundColor Yellow
