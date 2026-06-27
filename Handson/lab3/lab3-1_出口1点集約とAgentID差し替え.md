@@ -67,7 +67,7 @@ flowchart LR
 
 `prepare-env.ps1` が `.env.example` をベースに、lab2-3 の `a365.generated.config.json` から **Agent ID 値（`BLUEPRINT_APP_ID` / `AGENT_IDENTITY_APP_ID` / DPAPI 復号した `BLUEPRINT_CLIENT_SECRET`）** と、`az` から **テナント / サブスクリプション** を自動補完して `.env` を生成する（`USE_AGENT_ID_EGRESS=true` 固定＝出口を Agent ID に切り替える）。
 
-> **受講者は 12 人（user01～user12）。Azure リソースは受講者ごとに分離する**ため、`-Me userNN` で自分の識別子を渡す。`prepare-env.ps1` が ACA 名を `-userNN` 化した `.env` を生成する（`ACA_RESOURCE_GROUP=rg-userNN` / `ACA_APP_NAME=custom-maf-agent-a365-egress-userNN` / `ACA_ENV_NAME=aca-contoso-agent-userNN`）。`rg-userNN` ・ `aca-contoso-agent-userNN` は Lab2 と同じものを再利用し、egress 版は app 名で区別されるので受講者間で衝突しない。
+> **受講者は 12 人（user01～user12）。Azure リソースは受講者ごとに分離する**ため、`-Me userNN` で自分の識別子を渡す。`prepare-env.ps1` が ACA 名を `-userNN` 化した `.env` を生成する（`ACA_RESOURCE_GROUP=rg-userNN` / `ACA_APP_NAME=custom-maf-a365-egress-userNN` / `ACA_ENV_NAME=aca-contoso-agent-userNN`）。app 名は ACA の 32 文字制限に収めるため `agent` を省いている。`rg-userNN` ・ `aca-contoso-agent-userNN` は Lab2 と同じものを再利用し、egress 版は app 名で区別されるので受講者間で衝突しない。
 
 ```powershell
 cd C:\GitHub\Agent365-Onboarding\Handson\lab3\agent-custom-MAF-ACA-A365-egress
@@ -116,7 +116,7 @@ pwsh .\deploy-aca.ps1
 `deploy-aca.ps1` は次を行う:
 
 1. `az acr build` で Dockerfile からイメージをビルド（ローカル Docker 不要）
-2. 既存の ACA 環境（`aca-contoso-agent`、Lab2 と共用）に Container App `custom-maf-agent-a365-egress` を作成（外部 HTTPS, port 8000）
+2. 既存の ACA 環境（`aca-contoso-agent`、Lab2 と共用）に Container App `custom-maf-a365-egress` を作成（外部 HTTPS, port 8000）
 3. **システム割り当て MI（SAMI）を有効化**（ACA のホスト ID）。ただし**出口トークンは Agent ID（fmi_path）**が取得するため、SAMI は Foundry への直接アクセスには使わない（APIM 経由。`-FoundryResourceGroup` 指定時のみ防御的に `Azure AI Developer` を付与）
 4. Blueprint シークレットを ACA シークレット（`blueprint-secret`）として登録し、`BLUEPRINT_CLIENT_SECRET=secretref:blueprint-secret` で注入
 

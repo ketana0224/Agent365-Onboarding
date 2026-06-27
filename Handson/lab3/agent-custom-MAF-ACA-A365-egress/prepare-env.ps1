@@ -12,7 +12,7 @@
     BLUEPRINT_CLIENT_SECRET … agentBlueprintClientSecret を DPAPI(CurrentUser) 復号
     USE_AGENT_ID_EGRESS     … true（lab3-1 で出口を Agent ID に差し替える）
     ACA_RESOURCE_GROUP      … rg-<Me>（受講者ごとに分離）
-    ACA_APP_NAME            … custom-maf-agent-a365-egress-<Me>
+    ACA_APP_NAME            … custom-maf-a365-egress-<Me>（ACA 名 32 文字制限のため agent を省く）
     ACA_ENV_NAME            … aca-contoso-agent-<Me>
 
   ACA 名は受講者間で衝突しないよう -Me（userNN）でサフィックス化する。
@@ -104,7 +104,7 @@ if (-not $SubscriptionId -or -not $TenantId) {
 $overrides = @{
     'USE_AGENT_ID_EGRESS' = 'true'
     'ACA_RESOURCE_GROUP'  = "rg-$Me"
-    'ACA_APP_NAME'        = "custom-maf-agent-a365-egress-$Me"
+    'ACA_APP_NAME'        = "custom-maf-a365-egress-$Me"
     'ACA_ENV_NAME'        = "aca-contoso-agent-$Me"
 }
 if ($TenantId)       { $overrides['AZURE_TENANT_ID']        = $TenantId }
@@ -144,7 +144,7 @@ Write-Host "  AGENT_IDENTITY_APP_ID  : $(if ($AgentIdAppId) { $AgentIdAppId } el
 Write-Host "  BLUEPRINT_CLIENT_SECRET: $(if ($overrides.ContainsKey('BLUEPRINT_CLIENT_SECRET')) { '<復号済み・非表示>' } else { '<空・要手入力>' })"
 Write-Host "  USE_AGENT_ID_EGRESS    : true（lab3-1 で出口を Agent ID に差し替える）" -ForegroundColor DarkGray
 Write-Host "  ACA_RESOURCE_GROUP     : rg-$Me"
-Write-Host "  ACA_APP_NAME           : custom-maf-agent-a365-egress-$Me"
+Write-Host "  ACA_APP_NAME           : custom-maf-a365-egress-$Me"
 Write-Host "  ACA_ENV_NAME           : aca-contoso-agent-$Me"
 Write-Host ""
 Write-Host "PROJECT_ENDPOINT / MODEL_DEPLOYMENT_NAME は APIM 経由のため空のままで構いません（切り戻し用）。" -ForegroundColor DarkGray

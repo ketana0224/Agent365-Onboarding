@@ -4,7 +4,7 @@
 
 使い方:
     python smoke_test.py [BASE_URL]
-    例: python smoke_test.py https://custom-maf-agent-a365-egress.xxxx.eastus2.azurecontainerapps.io
+    例: python smoke_test.py https://custom-maf-a365-egress.xxxx.eastus2.azurecontainerapps.io
     既定: http://localhost:8000
 
 出口（UAMI / Agent ID）の確認は GET /debug/auth でも可能。

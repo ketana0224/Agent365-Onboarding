@@ -84,10 +84,10 @@ python smoke_test.py https://<your-app-fqdn>
 `USE_AGENT_ID_EGRESS` は**起動時に評価**されます。切り替えたら ACA リビジョンを再起動してください。
 
 ```powershell
-az containerapp update -n custom-maf-agent-a365-egress -g rg-foundryobs-eastus2 `
+az containerapp update -n custom-maf-a365-egress -g rg-foundryobs-eastus2 `
   --set-env-vars USE_AGENT_ID_EGRESS=true
-az containerapp revision restart -n custom-maf-agent-a365-egress -g rg-foundryobs-eastus2 `
-  --revision $(az containerapp revision list -n custom-maf-agent-a365-egress -g rg-foundryobs-eastus2 --query "[-1].name" -o tsv)
+az containerapp revision restart -n custom-maf-a365-egress -g rg-foundryobs-eastus2 `
+  --revision $(az containerapp revision list -n custom-maf-a365-egress -g rg-foundryobs-eastus2 --query "[-1].name" -o tsv)
 ```
 
 ### 統制の検証（Agent ID が実トラフィックに効く）

@@ -62,7 +62,7 @@ foreach ($line in Get-Content $EnvFile) {
 if (-not $SubscriptionId)        { $SubscriptionId        = $envMap['AZURE_SUBSCRIPTION_ID'] }
 if (-not $Location)              { $Location              = if ($envMap['AZURE_LOCATION']) { $envMap['AZURE_LOCATION'] } else { 'eastus2' } }
 if (-not $ResourceGroup)         { $ResourceGroup         = if ($envMap['ACA_RESOURCE_GROUP']) { $envMap['ACA_RESOURCE_GROUP'] } else { 'rg-foundryobs-eastus2' } }
-if (-not $AppName)               { $AppName               = if ($envMap['ACA_APP_NAME']) { $envMap['ACA_APP_NAME'] } else { 'custom-maf-agent-a365-egress' } }
+if (-not $AppName)               { $AppName               = if ($envMap['ACA_APP_NAME']) { $envMap['ACA_APP_NAME'] } else { 'custom-maf-a365-egress' } }
 if (-not $EnvName)               { $EnvName               = if ($envMap['ACA_ENV_NAME']) { $envMap['ACA_ENV_NAME'] } else { 'aca-contoso-agent' } }
 
 $projectEndpoint = $envMap['PROJECT_ENDPOINT']
