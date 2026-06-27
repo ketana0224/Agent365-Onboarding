@@ -117,10 +117,9 @@ pwsh .\deploy-aca.ps1
 
 1. `az acr build` で Dockerfile からイメージをビルド（ローカル Docker 不要）
 2. 既存の ACA 環境（`aca-contoso-agent`、Lab2 と共用）に Container App `custom-maf-a365-egress` を作成（外部 HTTPS, port 8000）
-3. **システム割り当て MI（SAMI）を有効化**（ACA のホスト ID）。ただし**出口トークンは Agent ID（fmi_path）**が取得するため、SAMI は Foundry への直接アクセスには使わない（APIM 経由。`-FoundryResourceGroup` 指定時のみ防御的に `Azure AI Developer` を付与）
-4. Blueprint シークレットを ACA シークレット（`blueprint-secret`）として登録し、`BLUEPRINT_CLIENT_SECRET=secretref:blueprint-secret` で注入
+3. Blueprint シークレットを ACA シークレット（`blueprint-secret`）として登録し、`BLUEPRINT_CLIENT_SECRET=secretref:blueprint-secret` で注入（Agent ID の fmi_path 交換に使う）
 
-> UAMI の作成・割り当て・Graph 同意は **不要**。出口は Agent ID（fmi_path / Blueprint シークレット）が担い、ACA のホスト ID（SAMI）は Lab2 と同じまま。
+> Lab2 との違いはこの 3 番だけ。出口は Agent ID（fmi_path / Blueprint シークレット）が担う。
 
 ### 3. Agent ID 出口で動くことを確認する
 
@@ -133,25 +132,89 @@ python smoke_test.py https://<your-app-fqdn>
 
 ---
 
-## 確認
+## 補足｜原型（B）との差分は実質「credential 1 行」
 
-| チェック | 期待 |
+**Lab2 の原型（B）と本ステップの egress 版（C）の差は、モデル（LLM）と MCP を認証する出口 ID を入れ替えるだけ**。
+
+- **Lab2（原型 B）** … ACA の **SAMI**（DefaultAzureCredential）でモデルと MCP を認証する
+- **egress 版（C）** … **Agent ID**（fmi_path）でモデルと MCP を認証する
+
+コードで言えば、`build_agent` の中で出口 credential を 1 個だけ作るとき「何を代入するか」の 1 行が変わるだけで、LLM・MCP のどちらも下流では同じ `egress_credential` をそのまま使う。
+
+```python
+# 原型 B（UAMI のみ）
+egress_credential = credential                          # DefaultAzureCredential（SAMI）
+
+# egress 版 C（Agent ID 固定にするなら）
+egress_credential = AgentIdCredential(_get_agent_id_provider())
+```
+
+---
+
+## 補足｜この方式は言語・プラットフォームに依存するか
+
+### 言語・プラットフォームに依存しない（原理は HTTP のトークン交換）
+
+Agent ID 出口化の正体は、**出口で添える Bearer トークンを「SAMI のトークン」から「Agent ID（fmi_path 2 段階交換）のトークン」に差し替える**だけ。これは特定 SDK や言語の機能ではなく、**OAuth2 のトークン交換（client credentials ＋ JWT bearer assertion）という HTTP レベルの手続き**なので、原理的にはどの言語・プラットフォームでも同じことが言える。成立条件は次の 3 つだけ。
+
+| 条件 | 内容 |
 |---|---|
-| ACA の identity | system-assigned が有効、UAMI は割り当てなし |
-| `USE_AGENT_ID_EGRESS` | `true`（出口は Agent ID） |
-| Agent ID 用 env | `BLUEPRINT_APP_ID` / `AGENT_IDENTITY_APP_ID` / `BLUEPRINT_CLIENT_SECRET`（secretref）が投入済み |
-| `/chat` | Agent ID 出口で APIM 経由の LLM / MCP が動く |
+| ① トークン交換ができる | Blueprint appId＋secret → `fmi_path` で親トークン → Agent Identity appId で子トークン。`curl` / `HttpClient` / `requests` 等、HTTP を叩ければよい（Python / .NET / Java / Node / Go すべて可） |
+| ② 出口で `Authorization: Bearer` を差し込める | LLM クライアントと MCP クライアントが「トークン取得関数（credential）」を**外から注入できる**設計であること |
+| ③ 受け側がトークンを受理する | APIM / Foundry が audience・issuer を検証して通すこと（appid を個別検証していなければ SAMI と同様に通る） |
+
+逆に言うと、**SDK が「自前で勝手にトークンを取りに行き、credential を差し替えられない」造りだと難しい**。今回の MAF が楽なのは `credential=` を外から渡せる＝② を満たしているから。**言語の問題ではなく「出口のトークン取得を差し替え可能に設計してあるか」が分かれ目**。
+
+### モデル・MCP を APIM に集約しているのでより簡単になる
+
+APIM 集約は Agent ID 化を実質的にかなり簡単にしている。
+
+1. **出口が物理的に 1〜2 本に絞られる** … モデルも MCP も宛先が APIM の 1 ホストに集まるので、「どのトークンをどの宛先に添えるか」の配線が `_egress_token(scope)` の 1 点だけで済む。直叩き構成だと宛先ごとに認証方式がバラけ、差し替え箇所が分散する。
+2. **検証ポリシーを APIM 側に寄せられる** … `validate-azure-ad-token` が **audience（`cognitiveservices.azure.com`）と issuer しか見ない**ため、トークンの持ち主が SAMI でも Agent ID でも同じポリシーで通る。**出口を Agent ID に替えても APIM 側は無改修**。これが「簡単」の最大要因。
+3. **観測・ガバナンスが 1 箇所に集まる** … 誰が（どの Agent ID で）モデル / MCP を叩いたかが APIM のログに集約され、レート制限・遮断・監査も APIM 1 箇所で打てる。
+
+注意点：
+
+- APIM が **appid（呼び出し元アプリの id）まで厳密検証**するポリシーに変えると、SAMI → Agent ID の差し替えで弾かれるので、その場合は APIM 側も許可リストの更新が必要。
+- 「簡単」なのは**出口の付け替え**の話であって、**Agent ID の発行・Blueprint・管理者承認**（`a365 setup`）の手間は別途必要。そこは APIM 集約とは無関係に発生する。
 
 ---
 
-## トラブルシュート
+## キルスイッチ検証｜Agent ID を Block すると出口が止まる
 
-| 症状 | 原因 | 対処 |
-|---|---|---|
-| LLM が 404（Resource not found） | コードが Responses API を叩いている | `OpenAIChatCompletionClient`（Chat Completions）を使う。汎用 `OpenAIChatClient` は不可（[lab2-2](../lab2/lab2-2_ACAカスタムエージェントデプロイ.md) 参照） |
-| デプロイ時に Agent ID 値の不足エラー | `USE_AGENT_ID_EGRESS=true` なのに 3 値が未設定 | `BLUEPRINT_APP_ID` / `AGENT_IDENTITY_APP_ID` / `BLUEPRINT_CLIENT_SECRET` を `.env` に入れる。別ユーザー/別マシンは `BLUEPRINT_CLIENT_SECRET` を手で復号して補う |
-| `/chat` が 401 / 403 | SAMI に Foundry ロール未付与 | `deploy-aca.ps1` の RBAC ステップ（`Azure AI Developer`）が成功したか確認 |
+出口を Agent ID に差し替えたことで、**M365 管理センター（admin.microsoft.com）> Agents > 対象エージェント > Block**（または Entra 管理センター > Agent identities > Disable）を押すだけで、このエージェントの LLM / MCP 出口を一括で遮断できる。Block すると Agent Identity の SP が `accountEnabled=false` になり、fmi_path のトークン交換が成立しなくなる。
 
----
+Block 後に改めて確認用の smoke test を実行すると、LLM / MCP がどちらも止まり `500` になる:
 
-完了したら、Agent ID を止めて LLM / MCP を遮断するキルスイッチの検証（後続ステップ）に進む。
+```text
+PS> python smoke_test.py https://custom-maf-a365-egress-user99.salmonmeadow-9e9460b3.eastus2.azurecontainerapps.io
+BASE: https://custom-maf-a365-egress-user99.salmonmeadow-9e9460b3.eastus2.azurecontainerapps.io
+HEALTH: ok
+
+== Q: 30 日前に買った衣料品（general）を返品できますか？
+A: [HTTPError 500] Internal Server Error
+...（以降の質問も全て 500）
+
+== /debug/auth use_agent_id_egress=True
+   - step1_parent_token aud=fb60f99c-7a34-4190-8149-302f77469936 appid=None
+```
+
+> `HEALTH: ok`（アプリ自体は生きている）なのに `/chat` が全て 500 ＝ 出口（Agent ID）が遮断された状態。`/debug/auth` を見ると fmi_path のトークン交換が成立しなくなっている。
+
+### Block しても「即座」には止まらない（トークン TTL のため）
+
+Block は **新規のトークン発行を止めるだけ**で、すでに発行済みの Agent ID トークン（aud=cognitiveservices, TTL ≈ 3599 秒）は**プロセス内にキャッシュされている間は有効**。さらに `accountEnabled=false` が STS（トークン発行基盤）へ伝播するまで**数分**かかる。このため Block 直後はしばらく `/chat` が成功し続けることがある。
+
+挙動は2段階で観測される:
+
+1. **Block 直後** … 既存キャッシュ＋STS 未伝播のため、トークン発行が成功してしまい `/chat` も通る（または Graph 側だけ `401 Authorization_IdentityDisabled`）。
+2. **数分後** … STS 伝播が完了し、fmi_path のトークン発行自体が `AADSTS7000112: Application is disabled` で失敗 → 上記のように全て `500` になる。
+
+**即時に遮断を実証したいとき（対策）**: ACA のリビジョンを再起動してプロセス内のトークン キャッシュを捨てる。
+
+```powershell
+# 最新リビジョンを再起動してキャッシュをクリア
+az containerapp revision restart `
+  -g rg-userNN -n custom-maf-a365-egress-userNN `
+  --revision $(az containerapp revision list -g rg-userNN -n custom-maf-a365-egress-userNN --query "[0].name" -o tsv)
+```
