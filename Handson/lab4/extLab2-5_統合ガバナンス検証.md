@@ -69,7 +69,7 @@ curl -s "https://$fqdn/debug/auth" | ConvertFrom-Json | Select-Object -Last 4 | 
 
 ### A-1. audience 検証（既定で有効）
 
-extLab2-2 で投入したポリシーには `validate-azure-ad-token`（`aud=https://cognitiveservices.azure.com`）が入っている。**不正な audience / トークン無しは APIM が 401 で弾く**。
+APIM に投入済みのポリシー（Lab2 の APIM 経由構成）には `validate-azure-ad-token`（`aud=https://cognitiveservices.azure.com`）が入っている。**不正な audience / トークン無しは APIM が 401 で弾く**。
 
 ```powershell
 # トークン無し → 401

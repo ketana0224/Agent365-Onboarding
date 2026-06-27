@@ -284,7 +284,7 @@ a365 publish --agent-name custom-maf-agent-a365-ext
 | ラボ | 実行体 | 到達性 | 統制 | フル機能化への貢献 |
 |---|---|---|---|---|
 | [extLab2](../extLab2/README.md) | APIM+UAMI の MAF/ACA（`/api/messages` 実装済み） | Teams 往復可 | UAMI + APIM の egress 統制のみ | **土台（実行体）** |
-| [Lab1-2](Lab1-2_AgentID.md) | 素の `setup all` | 無し | Agent ID 統制 | **(1) の手順** |
+| [Lab2-3](../lab2/lab2-3_AgentID作成.md) | 素の `setup all` | 無し | Agent ID 統制 | **(1) の手順** |
 | [Lab1-3](Lab1-3_m365.md) | `--m365`/endpoint 後付け | Teams 往復 | (1) と同じ | **(2) の手順** |
 | [Lab1-4](Lab1-4_AIteammate.md) | `--aiteammate` | Teams 往復 | 人間相当（agentic user） | **(3) の手順** |
 | **本ラボ (Lab1-5)** | **extLab2 実行体に (1)→(3) を適用** | ✅ | ✅ 最深 | **= フル機能の統合形** |
