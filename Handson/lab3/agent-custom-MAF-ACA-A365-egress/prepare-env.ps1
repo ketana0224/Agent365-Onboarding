@@ -10,7 +10,7 @@
     BLUEPRINT_APP_ID        … lab2-3 generated config の agentBlueprintId
     AGENT_IDENTITY_APP_ID   … lab2-3 generated config の agenticAppId
     BLUEPRINT_CLIENT_SECRET … agentBlueprintClientSecret を DPAPI(CurrentUser) 復号
-    USE_AGENT_ID_EGRESS     … false（lab3-1 は SAMI を既定出口にする＝配線のみ）
+    USE_AGENT_ID_EGRESS     … true（lab3-1 で出口を Agent ID に差し替える）
 
   Blueprint シークレットは DPAPI(CurrentUser) 暗号化のため、a365 setup all を実行した
   のと同じ Windows ユーザーでのみ復号できる。
@@ -90,9 +90,9 @@ if (-not $SubscriptionId -or -not $TenantId) {
     }
 }
 
-# --- 3. 差し込む値（USE_AGENT_ID_EGRESS は lab3-1 では false 固定）-------------
+# --- 3. 差し込む値（USE_AGENT_ID_EGRESS は lab3-1 では true 固定）-------------
 $overrides = @{
-    'USE_AGENT_ID_EGRESS' = 'false'
+    'USE_AGENT_ID_EGRESS' = 'true'
 }
 if ($TenantId)       { $overrides['AZURE_TENANT_ID']        = $TenantId }
 if ($SubscriptionId) { $overrides['AZURE_SUBSCRIPTION_ID']  = $SubscriptionId }
@@ -129,7 +129,7 @@ Write-Host "  AZURE_SUBSCRIPTION_ID  : $(if ($SubscriptionId) { $SubscriptionId 
 Write-Host "  BLUEPRINT_APP_ID       : $(if ($BlueprintAppId) { $BlueprintAppId } else { '<空・要手入力>' })"
 Write-Host "  AGENT_IDENTITY_APP_ID  : $(if ($AgentIdAppId) { $AgentIdAppId } else { '<空・要手入力>' })"
 Write-Host "  BLUEPRINT_CLIENT_SECRET: $(if ($overrides.ContainsKey('BLUEPRINT_CLIENT_SECRET')) { '<復号済み・非表示>' } else { '<空・要手入力>' })"
-Write-Host "  USE_AGENT_ID_EGRESS    : false（lab3-1 は SAMI を既定出口に保つ＝配線のみ）" -ForegroundColor DarkGray
+Write-Host "  USE_AGENT_ID_EGRESS    : true（lab3-1 で出口を Agent ID に差し替える）" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "PROJECT_ENDPOINT / MODEL_DEPLOYMENT_NAME が空の場合は .env を開いて手で埋めてください。" -ForegroundColor Yellow
+Write-Host "PROJECT_ENDPOINT / MODEL_DEPLOYMENT_NAME は APIM 経由のため空のままで構いません（切り戻し用）。" -ForegroundColor DarkGray
 Write-Host "次に: pwsh .\deploy-aca.ps1" -ForegroundColor Yellow
