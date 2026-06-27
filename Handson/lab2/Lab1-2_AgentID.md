@@ -97,6 +97,18 @@
 
 [agent-custom-MAF-ACA-A365/.env](agent-custom-MAF-ACA-A365/.env) を開き、以下を確認する（機密値はコミットしない。`.env` は `.gitignore` 済み）。
 
+> **受講者は 12 人（user01〜user12）。Azure リソースは受講者ごとに分離する**ため、自分の識別子 `userNN`（環境変数 `me`）を決め、`.env` の **`ACA_RESOURCE_GROUP` / `ACA_APP_NAME` / `ACA_ENV_NAME` に `-userNN` を付ける**（リソース グループは `rg-userNN`）。これで ACR・Container Apps 環境・Container App が受講者間で衝突しない。`deploy-aca.ps1` は `ACA_RESOURCE_GROUP`（=`rg-userNN`）を**自動作成**する。
+> 一方 **Foundry（`PROJECT_ENDPOINT`）・APIM（モデル/MCP）・Application Insights・`AZURE_RESOURCE_GROUP`（`rg-foundryobs-eastus2`：Foundry アカウントが属する共有 RG。ロール付与のスコープに使う）は全受講者で共有**するため変更しない。
+
+> **`.env` は `.gitignore` 済みなので、[new-env.ps1](agent-custom-MAF-ACA-A365/new-env.ps1) で生成する**。共有基盤値はスクリプト内に埋め込み済みで、`-Me` に自分の識別子を渡すだけで ACA 値が `-userNN` 化された `.env` ができる（冪等。下表の値が書き出される）。
+>
+> ```powershell
+> cd Handson/lab2/agent-custom-MAF-ACA-A365
+> ./new-env.ps1 -Me user01        # 例: user01。§3 の前に実行
+> ```
+>
+> Agent ID 値（`CLIENTID`/`CLIENTSECRET`/`AGENT_ID`/`AGENT365OBSERVABILITY__*`）は §4.2 の `a365 setup all` で `a365.generated.config.json` が出来てから埋まる。**§4.2 実行後にもう一度** `./new-env.ps1 -Me user01 -Force` を回すと、生成 config（DPAPI 保護シークレットを含む）から自動補完される。手で編集する場合は下表を参照。
+
 | キー | 値 |
 |---|---|
 | `PROJECT_ENDPOINT` | `https://foundryobsjyenh.services.ai.azure.com/api/projects/proj-foundryobs-jyenh`（Foundry プロジェクト。Observability で使用） |
@@ -106,9 +118,10 @@
 | `APIM_AOAI_API_VERSION` | `2024-10-21` |
 | `CONTOSO_MCP_URL` | `https://apim-aigateway-eastus2.azure-api.net/contoso-policy/mcp`（**MCP も APIM AI Gateway 経由**。APIM が backend MCP へ `x-contoso-key` を named value から付与して中継） |
 | `CONTOSO_MCP_KEY` | （APIM 経由化後は通常不要。直接 backend に切り戻すとき用に保持。秘匿） |
-| `ACA_RESOURCE_GROUP` | `rg-foundryobs-eastus2` |
-| `ACA_APP_NAME` | `custom-maf-agent-a365` |
-| `ACA_ENV_NAME` | `aca-contoso-agent`（既存環境がある場合はそれを再利用） |
+| `ACA_RESOURCE_GROUP` | `rg-userNN`（受講者ごと。例 `rg-user01`。`deploy-aca.ps1` が自動作成） |
+| `ACA_APP_NAME` | `custom-maf-agent-a365-userNN`（例 `custom-maf-agent-a365-user01`。§4.2 の `--agent-name` と揃える） |
+| `ACA_ENV_NAME` | `aca-contoso-agent-userNN`（例 `aca-contoso-agent-user01`） |
+| `AZURE_RESOURCE_GROUP` | `rg-foundryobs-eastus2`（**共有・変更しない**。Foundry アカウントの所在＝ロール付与スコープ） |
 
 > **Model と MCP はともに APIM AI Gateway（`apim-aigateway-eastus2`）経由**で出ていく。モデルは `https://apim-aigateway-eastus2.azure-api.net/openai`、MCP は `https://apim-aigateway-eastus2.azure-api.net/contoso-policy` をベース URL とする。MCP の backend は japaneast の稼働中 ACA だが、APIM が中継・キー付与するためアプリ側は APIM の URL だけを参照する。
 
@@ -124,12 +137,12 @@ pwsh -NoProfile -File ./deploy-aca.ps1
 `deploy-aca.ps1` が行うこと:
 
 1. `az acr build` で `Dockerfile`（`python:3.11-slim` + uvicorn）をクラウドビルドし、ACR にイメージを push。
-2. Container Apps 環境（`ACA_ENV_NAME`）と Container App `custom-maf-agent-a365` を作成（外部 HTTPS Ingress、ターゲットポート 8000）。
+2. リソース グループ `rg-userNN` を作成し、Container Apps 環境（`ACA_ENV_NAME`）と Container App（`ACA_APP_NAME`＝`custom-maf-agent-a365-userNN`）を作成（外部 HTTPS Ingress、ターゲットポート 8000）。
 3. **システム割り当てマネージド ID** を有効化。
 4. その MI に Foundry アカウントへの **`Azure AI Developer`** ロールを付与（モデル推論用）。
 5. リビジョンを再起動し、公開 URL を出力。
 
-完了時に以下が出力される（実測値）:
+完了時に以下が出力される（実測値の例。アプリ名 `custom-maf-agent-a365-userNN`・サブドメイン・principalId は受講者ごとに異なる）:
 
 | 項目 | 値 |
 |---|---|
@@ -142,12 +155,14 @@ pwsh -NoProfile -File ./deploy-aca.ps1
 ### 3.3 スモークテスト
 
 ```powershell
+# §3.2 の出力にある自分の App URL（受講者ごとに異なる）を入れる
+$app = "https://custom-maf-agent-a365-user01.<自分のサブドメイン>.eastus2.azurecontainerapps.io"
+
 # ヘルス
-curl https://custom-maf-agent-a365.proudflower-d41f2cf1.eastus2.azurecontainerapps.io/healthz
+curl "$app/healthz"
 
 # チャット（Contoso ポリシー MCP 経由）
-curl -X POST `
-  https://custom-maf-agent-a365.proudflower-d41f2cf1.eastus2.azurecontainerapps.io/chat `
+curl -X POST "$app/chat" `
   -H "Content-Type: application/json" `
   -d '{"message":"返品ポリシーを教えて"}'
 ```
@@ -155,10 +170,10 @@ curl -X POST `
 期待される応答（抜粋・確認済み）:
 
 ```json
-{"agent":"custom-maf-agent-a365","reply":"Contoso の一般商品の返品ポリシーは…返品期間: 購入後30日以内…"}
+{"agent":"custom-maf-agent-a365-user01","reply":"Contoso の一般商品の返品ポリシーは…返品期間: 購入後30日以内…"}
 ```
 
-- `agent` が `custom-maf-agent-a365` であること、返品/配送/支払/ロイヤルティ等の回答に MCP の値が反映されることを確認する。
+- `agent` が自分の `custom-maf-agent-a365-userNN` であること、返品/配送/支払/ロイヤルティ等の回答に MCP の値が反映されることを確認する。
 - 初回 `/chat` が 401/403 の場合は **ロール伝播待ち**。数分おいて再試行。
 - まとめて 5 問叩く場合: `python smoke_test.py <App URL>`。
 
@@ -288,9 +303,9 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
 > 手動で確認する場合:
 >
 > ```powershell
-> az resource list --resource-group rg-foundryobs-eastus2 --output table
+> az resource list --resource-group rg-userNN --output table   # 例 rg-user01
 > # ACA の MI が有効か
-> az containerapp identity show --name custom-maf-agent-a365 --resource-group rg-foundryobs-eastus2
+> az containerapp identity show --name custom-maf-agent-a365-userNN --resource-group rg-userNN
 > ```
 
 **(3) Entra 登録を確認**:
