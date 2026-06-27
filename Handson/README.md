@@ -48,10 +48,10 @@ flowchart LR
         direction TB
         Lab1["Lab1: レジストリ同期だけ<br/>(見えるが統制できない)"]
         Lab2["Lab2: Agent ID 発行<br/>(CA でブロック可)"]
-        Lab3["Lab3: M365 到達性<br/>(Teams で往復)"]
-        Lab4["Lab4: AI teammate<br/>(人間相当の統制)"]
-        Lab5["Lab5: 出口を UAMI に集約<br/>(APIM ガバナンスを強制)"]
-        Lab6["Lab6: 出口を Agent ID 化<br/>(キルスイッチ成立)"]
+        Lab3["Lab3: 出口を UAMI に集約<br/>(APIM ガバナンスを強制)"]
+        Lab4["Lab4: 出口を Agent ID 化<br/>(キルスイッチ成立)"]
+        Lab5["Lab5: M365 到達性<br/>(Teams で往復)"]
+        Lab6["Lab6: AI teammate<br/>(人間相当の統制)"]
         Lab7["Lab7: Foundry Hosted 化(任意)<br/>(マネージド ホスティング)"]
         Lab1 --> Lab2 --> Lab3 --> Lab4 --> Lab5 --> Lab6 --> Lab7
     end
@@ -68,10 +68,10 @@ flowchart LR
     end
     Lab1 -.-> C1
     Lab2 -.-> C2
-    Lab3 -.-> C3
-    Lab4 -.-> C4
-    Lab5 -.-> C5
-    Lab6 -.-> C6
+    Lab3 -.-> C5
+    Lab4 -.-> C6
+    Lab5 -.-> C3
+    Lab6 -.-> C4
     Lab7 -.-> C7
 ```
 
@@ -79,10 +79,10 @@ flowchart LR
 |---|---|---|
 | Lab1 | **可視化のみ**（CA / Purview / Defender は効かない） | Agent ID を持たない（外部基盤からの同期） |
 | Lab2 | **主体としてブロック可**（CA / Purview / Defender 自動適用） | Entra Agent ID（SP・`aiTeammate=false`） |
-| Lab3 | Lab2 の統制 + **Teams 到達性** | Lab2 と同一の Agent ID + メッセージング エンドポイント |
-| Lab4 | **人間社員相当**（メール / Teams 在席 / 上長関係 / DLP） | 専用ユーザー（agentic user・`aiTeammate=true`） |
-| Lab5 | 出口 ID を **UAMI 1 本に集約** + **APIM ポリシーを強制**（token limit / content safety / token 検証） | UAMI を出口に集約 |
-| Lab6 | **Agent ID を止めると実トラフィックが止まる**（キルスイッチ） | 出口トークンを Agent ID（fmi_path）に切替 |
+| Lab3 | 出口 ID を **UAMI 1 本に集約** + **APIM ポリシーを強制**（token limit / content safety / token 検証） | UAMI を出口に集約 |
+| Lab4 | **Agent ID を止めると実トラフィックが止まる**（キルスイッチ） | 出口トークンを Agent ID（fmi_path）に切替 |
+| Lab5 | Lab2 の統制 + **Teams 到達性** | Lab2 と同一の Agent ID + メッセージング エンドポイント |
+| Lab6 | **人間社員相当**（メール / Teams 在席 / 上長関係 / DLP） | 専用ユーザー（agentic user・`aiTeammate=true`） |
 | Lab7 | ホスティング・スケール・Playground を Foundry に寄せる | Hosted Agent のマネージド ID |
 
 ---
@@ -94,13 +94,13 @@ flowchart LR
 | **Lab0** | [オリエン & 環境確認](#lab0オリエン--環境確認) | 全体像・用語・前提リソースの疎通確認 | [Lab1/README](lab0/Lab1_README.md) / [extLab2/README](lab0/extLab2_README.md) | 20 分 |
 | **Lab1** | [レジストリ同期だけでは統制できない](#lab1レジストリ同期だけでは統制できない) | 「見えるだけ」の弱い段を体感し、Agent ID の必要性を導く | [Lab1-1](lab1/Lab1-1_レジストリ同期.md) | 30 分 |
 | **Lab2** | [Agent ID を発行して統制主体にする](#lab2agent-id-を発行して統制主体にする) | `a365 setup all` で Agent ID を発行し CA でブロック | [Lab1-2](lab2/Lab1-2_AgentID.md) | 50 分 |
-| **Lab3** | [Teams から呼べるようにする](#lab3teams-から呼べるようにする) | メッセージング エンドポイント登録で Teams 往復 | [Lab1-3](lab3/Lab1-3_m365.md) / [extLab2-3](lab3/extLab2-3_Teams接続_M365AgentsSDK.md) | 45 分 |
-| **Lab4** | [AI teammate にする](#lab4ai-teammate-にする) | 専用ユーザー（agentic user）で人間相当の統制 | [Lab1-4](lab4/Lab1-4_AIteammate.md) | 40 分 |
-| **Lab5** | [出口を UAMI に集約し APIM ガバナンスを効かせる](#lab5出口を-uami-に集約し-apim-ガバナンスを効かせる) | 出口 ID を UAMI 1 本に集約 + APIM ポリシー強制 | [extLab2-1](lab5/extLab2-1_UAMI出口化.md) / [extLab2-2](lab5/extLab2-2_APIM_AI_Gateway化.md) | 50 分 |
-| **Lab6** | [出口を Agent ID 化してキルスイッチを成立させる](#lab6出口を-agent-id-化してキルスイッチを成立させる) | 出口トークンを Agent ID にし、止めると遮断 | [extLab2-4](lab6/extLab2-4_AgentID出口化_配線と検証.md) / [extLab2-5](lab6/extLab2-5_統合ガバナンス検証.md) / [Lab1-5](lab6/Lab1-5_extLab2をA365フル機能化.md) | 50 分 |
+| **Lab3** | [出口を UAMI に集約し APIM ガバナンスを効かせる](#lab3出口を-uami-に集約し-apim-ガバナンスを効かせる) | 出口 ID を UAMI 1 本に集約 + APIM ポリシー強制 | [extLab2-1](lab3/extLab2-1_UAMI出口化.md) / [extLab2-2](lab3/extLab2-2_APIM_AI_Gateway化.md) | 50 分 |
+| **Lab4** | [出口を Agent ID 化してキルスイッチを成立させる](#lab4出口を-agent-id-化してキルスイッチを成立させる) | 出口トークンを Agent ID にし、止めると遮断 | [extLab2-4](lab4/extLab2-4_AgentID出口化_配線と検証.md) / [extLab2-5](lab4/extLab2-5_統合ガバナンス検証.md) / [Lab1-5](lab4/Lab1-5_extLab2をA365フル機能化.md) | 50 分 |
+| **Lab5** | [Teams から呼べるようにする](#lab5teams-から呼べるようにする) | メッセージング エンドポイント登録で Teams 往復 | [Lab1-3](lab5/Lab1-3_m365.md) / [extLab2-3](lab5/extLab2-3_Teams接続_M365AgentsSDK.md) | 45 分 |
+| **Lab6** | [AI teammate にする](#lab6ai-teammate-にする) | 専用ユーザー（agentic user）で人間相当の統制 | [Lab1-4](lab6/Lab1-4_AIteammate.md) | 40 分 |
 | **Lab7**（任意） | [Foundry Hosted Agent に載せ替える](#lab7任意foundry-hosted-agent-に載せ替える) | マネージド ホスティングへ lift、Block 検証 | [lab-foundry-hosted-agent/README](lab7/lab-foundry-hosted-agent/README.md) | 40 分 |
 
-> **コア体験は Lab0→Lab6**。Lab7 は「自前 ACA 運用」と「Foundry マネージド運用」を比較したい場合の発展。
+> **コア体験は Lab0→Lab4**（Agent ID + 出口統制 + キルスイッチ）。Lab5（Teams 到達性）/ Lab6（AI teammate）は任意トラック、Lab7 は「自前 ACA 運用」と「Foundry マネージド運用」の比較。
 > 時間が限られる場合の短縮版は [§4 タイムテーブル](#4-タイムテーブル時間配分案) を参照。
 
 ---
@@ -135,42 +135,42 @@ flowchart LR
 | **成果物 / 検証** | Agent ID 発行済み／CA ブロックで fmi_path のトークン交換が失敗（サインイン ログに Failure） |
 | **対応 lab** | [Lab1-2](lab2/Lab1-2_AgentID.md) |
 
-### Lab3｜Teams から呼べるようにする
+### Lab3｜出口を UAMI に集約し APIM ガバナンスを効かせる
 
 | 項目 | 内容 |
 |---|---|
-| **ねらい** | Lab2 の Agent ID はそのままに、**メッセージング エンドポイント登録**で Teams / Copilot から実メッセージ往復できる「到達性」を足す。**統制レベルは Lab2 のまま変わらない**。 |
+| **ねらい** | **APIM 経由は Lab2 から（ベースラインは疎通のみ）**。Lab3 では出口を 2 軸で強化する: **① 出口 ID を UAMI 1 本に集約**（`DefaultAzureCredential` 1 本で LLM / MCP / Graph のトークンを取得）+ **② APIM のガバナンス ポリシーを強制**（token limit / content safety / `validate-azure-ad-token`）。＝ Lab2 の「素通りに近い APIM」を **統制ゲートウェイ**に格上げする。 |
+| **やること** | ・UAMI を作成し ACA に割り当て、`DefaultAzureCredential` 1 本で LLM / MCP / Graph のトークンを取得<br>・`setup-apim-aigateway.ps1` で APIM に `azure-openai`（path=openai）と `contoso-policy-mcp`（path=contoso-policy）を登録<br>・LLM / MCP が APIM の `validate-azure-ad-token` を通過して動くことを確認 |
+| **成果物 / 検証** | LLM / MCP が APIM 経由で 200 応答／APIM の token limit・content safety が効く |
+| **対応 lab** | [extLab2-1](lab3/extLab2-1_UAMI出口化.md) / [extLab2-2](lab3/extLab2-2_APIM_AI_Gateway化.md) |
+
+### Lab4｜出口を Agent ID 化してキルスイッチを成立させる
+
+| 項目 | 内容 |
+|---|---|
+| **ねらい** | 出口トークンを UAMI → **Agent ID（fmi_path 2 ステップ交換）** に切り替え、**Agent ID を止めると LLM / MCP が遮断される**キルスイッチを成立させる。Lab2〜Lab3 の総仕上げ（＝ 出口統制トラックの到達点）。 |
+| **やること** | ・`USE_AGENT_ID_EGRESS=true` で出口を Agent ID に切替（Blueprint シークレットは Key Vault 参照で ACA に供給）<br>・**(a) Agent ID 停止**（無効化 / CA / 削除）で LLM / MCP が止まることを検証<br>・(b) APIM の audience 検証・(c) A365 ネイティブ観測性を補助確認<br>・（任意統合）extLab2 実行体を Lab1-5 の手順でフル機能化（AI teammate は Lab6 を参照） |
+| **成果物 / 検証** | Agent ID 無効化で実トラフィック（LLM / MCP）が停止する 3 層ガバナンス |
+| **対応 lab** | [extLab2-4](lab4/extLab2-4_AgentID出口化_配線と検証.md) / [extLab2-5](lab4/extLab2-5_統合ガバナンス検証.md) / [Lab1-5](lab4/Lab1-5_extLab2をA365フル機能化.md) |
+
+### Lab5｜Teams から呼べるようにする
+
+| 項目 | 内容 |
+|---|---|
+| **ねらい** | Lab2 の Agent ID はそのままに、**メッセージング エンドポイント登録**で Teams / Copilot から実メッセージ往復できる「到達性」を足す。**統制レベルは Lab2 のまま変わらない**（到達性トラック）。 |
 | **やること** | ・`/api/messages`（Microsoft 365 Agents SDK）を実装した実行体をデプロイ<br>・`a365 setup blueprint --endpoint-only --messaging-endpoint <ACA FQDN>/api/messages` で後付け登録<br>・Developer Portal 構成 → インスタンス要求/承認 → Teams から 1 往復 |
 | **成果物 / 検証** | Teams で素体エージェントと会話し、MCP 由来の回答が返る |
-| **対応 lab** | [Lab1-3](lab3/Lab1-3_m365.md) / [extLab2-3](lab3/extLab2-3_Teams接続_M365AgentsSDK.md) |
+| **対応 lab** | [Lab1-3](lab5/Lab1-3_m365.md) / [extLab2-3](lab5/extLab2-3_Teams接続_M365AgentsSDK.md) |
 
-### Lab4｜AI teammate にする
+### Lab6｜AI teammate にする
 
 | 項目 | 内容 |
 |---|---|
 | **ねらい** | 最強の段。**専用ユーザー アカウント（agentic user・`aiTeammate=true`）** を持たせ、メールボックス / Teams 在席 / ディレクトリ / 上長関係 / ライフサイクル / ユーザーデータ DLP まで人間社員と同等のガバナンスを効かせる。 |
 | **やること** | ・`a365.config.json` に `aiTeammate=true` を設定して `a365 setup all --aiteammate ...`<br>・`a365 publish` → 管理センターで承認 → agentic user 発行<br>・Activity ビューでターン単位スパンを可視化 |
 | **成果物 / 検証** | agentic user 発行／Teams 在席・ディレクトリ エントリ／Activity ビューでスパン可視化 |
-| **対応 lab** | [Lab1-4](lab4/Lab1-4_AIteammate.md) |
-| **メモ** | (3) `--aiteammate` は **Frontier プログラム + 対応ライセンス**前提。未契約なら Lab3 までで止め、手順は承認待ちとして提示。 |
-
-### Lab5｜出口を UAMI に集約し APIM ガバナンスを効かせる
-
-| 項目 | 内容 |
-|---|---|
-| **ねらい** | **APIM 経由は Lab2 から（ベースラインは疎通のみ）**。Lab5 では出口を 2 軸で強化する: **① 出口 ID を UAMI 1 本に集約**（`DefaultAzureCredential` 1 本で LLM / MCP / Graph のトークンを取得）+ **② APIM のガバナンス ポリシーを強制**（token limit / content safety / `validate-azure-ad-token`）。＝ Lab2〜4 の「素通りに近い APIM」を **統制ゲートウェイ**に格上げする。 |
-| **やること** | ・UAMI を作成し ACA に割り当て、`DefaultAzureCredential` 1 本で LLM / MCP / Graph のトークンを取得<br>・`setup-apim-aigateway.ps1` で APIM に `azure-openai`（path=openai）と `contoso-policy-mcp`（path=contoso-policy）を登録<br>・LLM / MCP が APIM の `validate-azure-ad-token` を通過して動くことを確認 |
-| **成果物 / 検証** | LLM / MCP が APIM 経由で 200 応答／APIM の token limit・content safety が効く |
-| **対応 lab** | [extLab2-1](lab5/extLab2-1_UAMI出口化.md) / [extLab2-2](lab5/extLab2-2_APIM_AI_Gateway化.md) |
-
-### Lab6｜出口を Agent ID 化してキルスイッチを成立させる
-
-| 項目 | 内容 |
-|---|---|
-| **ねらい** | 出口トークンを UAMI → **Agent ID（fmi_path 2 ステップ交換）** に切り替え、**Agent ID を止めると LLM / MCP が遮断される**キルスイッチを成立させる。Lab2〜Lab5 の総仕上げ。 |
-| **やること** | ・`USE_AGENT_ID_EGRESS=true` で出口を Agent ID に切替（Blueprint シークレットは Key Vault 参照で ACA に供給）<br>・**(a) Agent ID 停止**（無効化 / CA / 削除）で LLM / MCP が止まることを検証<br>・(b) APIM の audience 検証・(c) A365 ネイティブ観測性を補助確認<br>・（統合）extLab2 実行体を Lab1-5 の手順でフル機能化（AI teammate まで点灯） |
-| **成果物 / 検証** | Agent ID 無効化で実トラフィック（LLM / MCP）が停止する 3 層ガバナンス |
-| **対応 lab** | [extLab2-4](lab6/extLab2-4_AgentID出口化_配線と検証.md) / [extLab2-5](lab6/extLab2-5_統合ガバナンス検証.md) / [Lab1-5](lab6/Lab1-5_extLab2をA365フル機能化.md) |
+| **対応 lab** | [Lab1-4](lab6/Lab1-4_AIteammate.md) |
+| **メモ** | (3) `--aiteammate` は **Frontier プログラム + 対応ライセンス**前提。未契約なら Lab5 までで止め、手順は承認待ちとして提示。 |
 
 ### Lab7（任意）｜Foundry Hosted Agent に載せ替える
 
@@ -180,7 +180,7 @@ flowchart LR
 | **やること** | ・`azd ai agent`（`azure.ai.agents` 拡張）で `responses` プロトコルに載せ替えてデプロイ<br>・LLM 出口は APIM 経由を維持（`AzureOpenAIChatClient`）<br>・**Agent 365 の Block / Disable / CA が Hosted Agent にも効く**ことを確認（SP 無効化で出口が止まる） |
 | **成果物 / 検証** | Hosted Agent が応答／Block で出口が遮断される |
 | **対応 lab** | [lab-foundry-hosted-agent/README](lab7/lab-foundry-hosted-agent/README.md) |
-| **メモ** | 自前運用（Lab5/Lab6）とマネージド運用の **トレードオフ比較**として位置づける。 |
+| **メモ** | 自前運用（Lab3/Lab4）とマネージド運用の **トレードオフ比較**として位置づける。 |
 
 ---
 
@@ -194,25 +194,25 @@ flowchart LR
 | 0:20–0:50 | Lab1 レジストリ同期 |
 | 0:50–1:40 | Lab2 Agent ID 発行 + CA ブロック |
 | （休憩 10 分） | |
-| 1:50–2:35 | Lab3 Teams 到達性 |
-| 2:35–3:15 | Lab4 AI teammate |
+| 1:50–2:40 | Lab3 UAMI 出口集約 + APIM ガバナンス |
+| 2:40–3:30 | Lab4 Agent ID 出口化（キルスイッチ） |
 | （昼休み） | |
-| 4:00–4:50 | Lab5 UAMI 出口集約 + APIM ガバナンス |
-| 4:50–5:40 | Lab6 Agent ID 出口化（キルスイッチ） |
+| 4:00–4:45 | Lab5 Teams 到達性 |
+| 4:45–5:25 | Lab6 AI teammate |
 | （任意） | Lab7 Foundry Hosted 化 |
 
 ### 短縮版（半日・約 3h｜統制の本質に集中）
 
-Lab0 → Lab2（Agent ID + CA ブロック）→ Lab3（Teams 往復）→ Lab6（キルスイッチ）。Lab1 は概念説明、Lab4 / Lab5 / Lab7 はデモ提示で代替。
+Lab0 → Lab2（Agent ID + CA ブロック）→ Lab3（UAMI/APIM 出口集約）→ Lab4（キルスイッチ）。Lab1 は概念説明、Lab5（Teams）/ Lab6（AI teammate）/ Lab7 はデモ提示で代替。
 
 ---
 
 ## 5. 進め方の原則
 
 - **1 段ずつ確認してから次へ**。各段で「在庫に出るか」「主体としてブロックできるか」「Teams で往復できるか」「ユーザーとして振る舞えるか」「出口を止められるか」を検証する。
-- **素体は作り直さない**。Lab2 以降は同じ `custom-maf-agent-a365` を強化していく（Lab3 で `/api/messages` 実装、Lab5 で UAMI/APIM 配線、Lab6 で Agent ID 出口）。
+- **素体は作り直さない**。Lab2 以降は同じ `custom-maf-agent-a365` を強化していく（Lab3 で UAMI/APIM 配線、Lab4 で Agent ID 出口、Lab5 で `/api/messages` 実装）。
 - **Agent ID と実行体は別物**。CA で止まるのは「ID としてのアクセス」、プロセス停止は ACA 操作（自作の場合）。Hosted（Lab7）は ID と実行を一体で統制できる。
-- **Frontier 依存の段（Lab1 の Registry sync・Lab4 の AI teammate）** は未契約環境ではデモ提示に切り替える。
+- **Frontier 依存の段（Lab1 の Registry sync・Lab6 の AI teammate）** は未契約環境ではデモ提示に切り替える。
 
 ---
 
