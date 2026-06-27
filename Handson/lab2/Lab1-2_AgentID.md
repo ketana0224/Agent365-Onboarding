@@ -99,15 +99,18 @@
 
 | キー | 値 |
 |---|---|
-| `PROJECT_ENDPOINT` | `https://foundryobsjyenh.services.ai.azure.com/api/projects/proj-foundryobs-jyenh` |
+| `PROJECT_ENDPOINT` | `https://foundryobsjyenh.services.ai.azure.com/api/projects/proj-foundryobs-jyenh`（Foundry プロジェクト。Observability で使用） |
 | `MODEL_DEPLOYMENT_NAME` | `gpt-5.4` |
-| `CONTOSO_MCP_URL` | `https://contoso-policy-mcp.gentleisland-42a91f9a.eastus2.azurecontainerapps.io/mcp` |
-| `CONTOSO_MCP_KEY` | （稼働中の Contoso ポリシー MCP のキー。秘匿） |
+| `APIM_AOAI_ENDPOINT` | `https://apim-aigateway-eastus2.azure-api.net/openai`（**モデル推論は APIM AI Gateway 経由**。`OpenAIChatCompletionClient(azure_endpoint=...)` に `/openai` までを渡す） |
+| `APIM_AOAI_DEPLOYMENT` | `gpt-5.4` |
+| `APIM_AOAI_API_VERSION` | `2024-10-21` |
+| `CONTOSO_MCP_URL` | `https://apim-aigateway-eastus2.azure-api.net/contoso-policy/mcp`（**MCP も APIM AI Gateway 経由**。APIM が backend MCP へ `x-contoso-key` を named value から付与して中継） |
+| `CONTOSO_MCP_KEY` | （APIM 経由化後は通常不要。直接 backend に切り戻すとき用に保持。秘匿） |
 | `ACA_RESOURCE_GROUP` | `rg-foundryobs-eastus2` |
 | `ACA_APP_NAME` | `custom-maf-agent-a365` |
 | `ACA_ENV_NAME` | `aca-contoso-agent`（既存環境がある場合はそれを再利用） |
 
-> MCP は **japaneast の稼働中エンドポイント**を使う（eastus2 にも同名 MCP があるが、本番アプリはこの japaneast を参照しているため切り替えない）。
+> **Model と MCP はともに APIM AI Gateway（`apim-aigateway-eastus2`）経由**で出ていく。モデルは `https://apim-aigateway-eastus2.azure-api.net/openai`、MCP は `https://apim-aigateway-eastus2.azure-api.net/contoso-policy` をベース URL とする。MCP の backend は japaneast の稼働中 ACA だが、APIM が中継・キー付与するためアプリ側は APIM の URL だけを参照する。
 
 ### 3.2 デプロイ
 
@@ -216,6 +219,8 @@ $me = "user01"   # ← 自分の番号に変更（user01〜user12）
 a365 setup all --agent-name "custom-maf-agent-a365-$me"
 ```
 
+> **`Warn: Frontier Preview Program - Tenant enrollment cannot be verified automatically ...` が出ても止まらない**。Agent 365 は **Frontier（Microsoft 365 Copilot 早期プレビュー）プログラム** の機能で、CLI はテナントが Frontier 登録済みかを自動確認できないため警告するだけ。**処理は継続する**。本ハンズオンのテナントは登録済みなので**無視して続行**してよい（未登録テナントだと後段の Blueprint 登録・同意 `resourceConsents` が失敗・空になり得る）。登録案内: <https://adoption.microsoft.com/copilot/frontier-program/>
+
 `a365 setup all` が一括で行うこと:
 
 | 種別 | 内容 |
@@ -224,17 +229,17 @@ a365 setup all --agent-name "custom-maf-agent-a365-$me"
 | Entra 登録 | Blueprint アプリ登録・Blueprint SP・**インスタンス用 Agent Identity**・`managerApplications` 設定（プラットフォーム管理に必須・CLI が自動設定） |
 | 権限付与 | Graph（Mail / Chat / Files / Sites / ChannelMessage 等）・Agent 365 Tools・Messaging Bot API・Observability・Power Platform。**継承可能（inheritable）** として設定され、インスタンスへ伝播 |
 | 資格情報 | Blueprint のクライアント シークレット（DPAPI 保護で生成・config に格納） |
-| 出力 | 作業ディレクトリに `a365.generated.config.json` を生成 |
+| 出力 | 作業ディレクトリに **2 つの config** を生成 → `a365.config.json`（入力＝tenantId・表示名・`useBlueprint` 等のフラグ。実 ID もシークレットも含まず**コミット可**）と `a365.generated.config.json`（出力＝provision された実リソース ID＋Blueprint シークレット〔DPAPI 保護〕。**コミット禁止**） |
 
 > **Global Administrator で実行**: 同意用のブラウザーが開く。同意フローを完了すると `resourceConsents` が埋まり `completed: true` になる。
 > **Agent ID Developer で実行**: OAuth2 の管理者同意だけは別ステップ。CLI が出力する **同意 URL を Global Administrator に共有**してもらう（完了まで `resourceConsents` が空・`completed: false` のことがある）。
 
-> M365 エージェント（Teams/Copilot）としてメッセージング エンドポイントも自動登録したい場合は `a365 setup all --m365` を使う。AI teammate は `--aiteammate`（手書きの `a365.config.json` が必要）。
+> M365 エージェント（Teams/Copilot）としてメッセージング エンドポイントも自動登録したい場合は `a365 setup all --m365` を使う。AI teammate は `--aiteammate`（このモードだけ `a365.config.json` を**実行前に手書き**で用意する必要がある。素のエージェント モードでは CLI が `a365.config.json` を自動生成するので手書き不要）。
 > 本ラボは素の `a365 setup all` で **Agent ID の発行と統制（§7）**まで。Teams からの実メッセージ往復（メッセージング エンドポイント登録）は後付け工程として [Lab1-3](../lab3/Lab1-3_m365.md) にまとめた。
 
 ### 4.3 作成結果の検証
 
-**(1) 生成 config を確認**（**シークレットはチャット/ログに貼らない**）。§4.2 と同じ agent フォルダーで実行する:
+**(1) 生成 config を確認**（`a365.generated.config.json` のこと。**シークレットはチャット/ログに貼らない**）。§4.2 と同じ agent フォルダーで実行する:
 
 ```powershell
 cd C:\GitHub\Agent365-Onboarding\_report\Handson\lab2\agent-custom-MAF-ACA-A365
