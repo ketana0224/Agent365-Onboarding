@@ -42,7 +42,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $agentRoot = $PSScriptRoot
 $envFile   = Join-Path $agentRoot '.env'
-$genFile   = Join-Path $agentRoot 'a365.generated.config.json'
+# a365 setup all は lab2 直下（agent フォルダーの親）に config を生成する
+$genFile   = Join-Path (Split-Path $agentRoot -Parent) 'a365.generated.config.json'
 
 Write-Host "== 受講者 .env 生成 ($Me) ==" -ForegroundColor Cyan
 

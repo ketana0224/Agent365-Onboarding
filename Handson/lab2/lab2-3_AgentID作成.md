@@ -42,12 +42,12 @@ az account show
 
 ### 4.2 setup の実行
 
-**エージェント フォルダー [agent-custom-MAF-ACA-A365](agent-custom-MAF-ACA-A365/) で実行する**（**3〜5 分**かかる）。`a365 setup all` は**カレント ディレクトリ**に `a365.generated.config.json` を生成し、`.env`（§4.3）も同じ場所へスタンプするため、§3 のビルド/デプロイと同じ agent フォルダーで実行する。
+**lab2 フォルダー（`Handson\lab2`）で実行する**（**3〜5 分**かかる）。`a365 setup all` は**カレント ディレクトリ**に `a365.config.json` / `a365.generated.config.json` を生成するため、lab2 直下で実行して両 config を lab2 ルートに置く（agent フォルダー内のスクリプトは親の lab2 ルートから自動で読み取る）。
 
 > **受講者は 12 人（user01〜user12）。エージェント名はテナント内で一意である必要がある**ため、`--agent-name` に**自分の受講者識別子をサフィックス**として付ける（例: `custom-maf-agent-a365-user01`）。これで Blueprint 登録・Agent Identity・Azure リソース名が受講者ごとに衝突しない。以降の手順に出てくる `custom-maf-agent-a365` も、自分のサフィックス付き名（`custom-maf-agent-a365-userNN`）に読み替えること。
 
 ```powershell
-cd C:\GitHub\Agent365-Onboarding\_report\Handson\lab2\agent-custom-MAF-ACA-A365
+cd C:\GitHub\Agent365-Onboarding\Handson\lab2
 
 # 受講者識別子（user01〜user12 のうち自分のもの）をここで指定
 $me = "user01"   # ← 自分の番号に変更（user01〜user12）
@@ -76,10 +76,10 @@ a365 setup all --agent-name "custom-maf-agent-a365-$me"
 
 ### 4.3 作成結果の検証
 
-**(1) 生成 config を確認**（`a365.generated.config.json` のこと。**シークレットはチャット/ログに貼らない**）。§4.2 と同じ agent フォルダーで実行する:
+**(1) 生成 config を確認**（`a365.generated.config.json` のこと。**シークレットはチャット/ログに貼らない**）。§4.2 と同じ lab2 フォルダーで実行する:
 
 ```powershell
-cd C:\GitHub\Agent365-Onboarding\_report\Handson\lab2\agent-custom-MAF-ACA-A365
+cd C:\GitHub\Agent365-Onboarding\Handson\lab2
 Get-Content a365.generated.config.json | ConvertFrom-Json | Format-List `
   agentBlueprintId, agentBlueprintServicePrincipalObjectId, agenticAppId, `
   agentRegistrationId, managedIdentityPrincipalId, messagingEndpoint, completed

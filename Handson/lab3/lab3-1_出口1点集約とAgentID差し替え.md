@@ -99,7 +99,7 @@ BLUEPRINT_CLIENT_SECRET=<DPAPI 復号した Blueprint シークレット>
 > Blueprint シークレットを単体で復号するワンライナー（同一 Windows ユーザー）:
 >
 > ```powershell
-> $s = (Get-Content ..\..\lab2\agent-custom-MAF-ACA-A365\a365.generated.config.json | ConvertFrom-Json).agentBlueprintClientSecret
+> $s = (Get-Content ..\..\lab2\a365.generated.config.json | ConvertFrom-Json).agentBlueprintClientSecret
 > [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect([Convert]::FromBase64String($s), $null, 'CurrentUser'))
 > ```
 

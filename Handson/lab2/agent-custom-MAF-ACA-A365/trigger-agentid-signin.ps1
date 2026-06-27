@@ -22,7 +22,8 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$ConfigDir = $PSScriptRoot
+    # a365 config は lab2 直下（このスクリプトがある agent フォルダーの親）にある
+    [string]$ConfigDir = (Split-Path $PSScriptRoot -Parent)
 )
 
 $ErrorActionPreference = 'Stop'

@@ -13,6 +13,7 @@ zzz.py
 **/.venv/
 
 # a365 generated state (contains client secret)
+a365.config.json
 a365.generated.config.json
 a365.config.backup-*.json
 setup-*.log

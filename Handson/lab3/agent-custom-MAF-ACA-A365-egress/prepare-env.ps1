@@ -26,8 +26,8 @@
 #>
 [CmdletBinding()]
 param(
-    # lab2-3 で a365 setup all を実行したエージェントの config ディレクトリ
-    [string]$SourceDir = (Join-Path $PSScriptRoot '..\lab2\agent-custom-MAF-ACA-A365'),
+    # lab2-3 で a365 setup all を実行した lab2 の config ディレクトリ
+    [string]$SourceDir = (Join-Path $PSScriptRoot '..\lab2'),
     # 入力テンプレート / 出力先
     [string]$ExampleFile = (Join-Path $PSScriptRoot '.env.example'),
     [string]$OutFile     = (Join-Path $PSScriptRoot '.env'),
