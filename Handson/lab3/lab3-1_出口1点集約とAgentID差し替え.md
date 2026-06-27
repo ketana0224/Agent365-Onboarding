@@ -65,20 +65,24 @@ flowchart LR
 
 ### 1. `.env` を用意する
 
-`agent-custom-MAF-ACA-A365-egress/.env.example` をコピーして `.env` を作る。
+`prepare-env.ps1` が `.env.example` をベースに、lab2-3 の `a365.generated.config.json` から **Agent ID 値（`BLUEPRINT_APP_ID` / `AGENT_IDENTITY_APP_ID` / DPAPI 復号した `BLUEPRINT_CLIENT_SECRET`）** と、`az` から **テナント / サブスクリプション** を自動補完して `.env` を生成する（`USE_AGENT_ID_EGRESS=false` 固定＝SAMI 既定の配線のみ）。
 
 ```powershell
 cd C:\GitHub\Agent365-Onboarding\Handson\lab3\agent-custom-MAF-ACA-A365-egress
-Copy-Item .env.example .env
+pwsh .\prepare-env.ps1 -ResourceGroup <Foundry の RG>
+# 既存 .env を上書きする場合は -Force
 ```
 
-主に埋める値:
+> Blueprint シークレットの復号は **lab2-3 で `a365 setup all` を実行したのと同一 Windows ユーザー**でのみ成功する。別ユーザー/別マシンでは `BLUEPRINT_CLIENT_SECRET` が空になるので、その値だけ手で補う。
+
+生成後、`AZURE_RESOURCE_GROUP` / `PROJECT_ENDPOINT` / `MODEL_DEPLOYMENT_NAME` が空なら `.env` を開いて埋める（APIM / MCP エンドポイントは `.env.example` の既定値がそのまま入る）。
 
 ```ini
-AZURE_TENANT_ID=<tenant>
-AZURE_RESOURCE_GROUP=<Foundry の RG>
+# prepare-env.ps1 が自動で入れる値（確認用）
+AZURE_TENANT_ID=<az から>
+AZURE_SUBSCRIPTION_ID=<az から>
 
-# LLM / MCP は Lab2 と同じ APIM エンドポイント
+# LLM / MCP は Lab2 と同じ APIM エンドポイント（.env.example の既定）
 APIM_AOAI_ENDPOINT=https://apim-aigateway-eastus2.azure-api.net/openai
 APIM_AOAI_DEPLOYMENT=gpt-5.4
 CONTOSO_MCP_URL=https://apim-aigateway-eastus2.azure-api.net/contoso-policy/mcp
@@ -90,12 +94,14 @@ AGENT_IDENTITY_APP_ID=<lab2-3 の Agent Identity appId>
 BLUEPRINT_CLIENT_SECRET=<DPAPI 復号した Blueprint シークレット>
 ```
 
-Blueprint シークレットの復号（lab2-3 を実行したのと同一 Windows ユーザーで）:
-
-```powershell
-$s = (Get-Content ..\..\lab2\agent-custom-MAF-ACA-A365\a365.generated.config.json | ConvertFrom-Json).agentBlueprintClientSecret
-[Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect([Convert]::FromBase64String($s), $null, 'CurrentUser'))
-```
+> 手で作る場合は `.env.example` をコピーして上記の値を埋めてもよい。
+>
+> Blueprint シークレットを単体で復号するワンライナー（同一 Windows ユーザー）:
+>
+> ```powershell
+> $s = (Get-Content ..\..\lab2\agent-custom-MAF-ACA-A365\a365.generated.config.json | ConvertFrom-Json).agentBlueprintClientSecret
+> [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect([Convert]::FromBase64String($s), $null, 'CurrentUser'))
+> ```
 
 > `USE_AGENT_ID_EGRESS=false` のままにしておく。Agent ID 用の 3 値は **配線（フラグを立てれば即切替できる状態）** のために入れておくだけで、既定では使われない。
 
