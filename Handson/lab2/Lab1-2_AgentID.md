@@ -316,30 +316,32 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
 
 1. [Microsoft Entra 管理センター](https://entra.microsoft.com) → 左メニュー **エージェント** → **Agents** を開く。
 2. 左ブレードの **Agent blueprints** を選ぶ → テナント内の Blueprint 一覧が出る（**Name / Agent identities / Status / Blueprint Application ID / Object ID** 列）。
-3. **Search by name, object ID or blueprint app ID** に `custom-maf-agent-a365` または appId `e65ce763-b70a-4991-854c-788c2862fb08` を入れて絞り込む。該当行（アイコン **CB** = `custom-maf-agent-a365 Blueprint`）の **Status** が **Active**、**Blueprint Application ID** = `e65ce763-…` であることを確認する。
-4. 一覧の **Name** 列のリンク（`custom-maf-agent-a365 Blueprint`）をクリックして詳細を開き、次の値を確認する（タブ: **Agent identity blueprint** / **Agent blueprint principal**、操作: **Disable / Delete / Refresh**）。
+3. **Search by name, object ID or blueprint app ID** に自分の Blueprint 名 `custom-maf-agent-a365-userNN`（userNN は自分の番号。例 user01）を入れて絞り込む。自分の appId は `a365.generated.config.json` の `agentBlueprintId` で確認できる（appId で検索してもよい）。該当行（アイコン **CB** = `custom-maf-agent-a365-userNN Blueprint`）の **Status** が **Active** であることを確認する。
+4. 一覧の **Name** 列のリンク（`custom-maf-agent-a365-userNN Blueprint`）をクリックして詳細を開き、次の値を確認する（タブ: **Agent identity blueprint** / **Agent blueprint principal**、操作: **Disable / Delete / Refresh**）。**下表は本ラボ実測の例。自分の app ID / object ID は §4.2 の `a365.generated.config.json`（`agentBlueprintId` / `agentBlueprintServicePrincipalObjectId`）と一致する。**
 
-   | 項目 | 値 |
+   | 項目 | 値（例・本ラボ実測） |
    |---|---|
    | **Status** | Active |
    | **Agent identities** | 1 |
    | **Owners** | 0 |
    | **Sponsors** | 0 |
    | **Created on** | 2026/6/23 |
-   | **Blueprint app ID** | `e65ce763-b70a-4991-854c-788c2862fb08` |
-   | **Blueprint object ID** | `e65ce763-b70a-4991-854c-788c2862fb08` |
-   | **Blueprint principal object ID** | `d96dee9c-2913-4af7-94e1-04859023ed97` |
+   | **Blueprint app ID** | `e65ce763-…`（自分の値は `agentBlueprintId`） |
+   | **Blueprint object ID** | `e65ce763-…`（app ID と同値） |
+   | **Blueprint principal object ID** | `d96dee9c-…`（自分の値は `agentBlueprintServicePrincipalObjectId`） |
 
 > Graph 権限（Mail.Send / Chat.ReadWrite / Files.ReadWrite.All 等）の付与・同意状況は、Agents ブレードの詳細ページには出ない。`a365.generated.config.json`（§4.2 のチェック）で確認するか、下記 CLI を使う。手動の FIC 設定は不要。`a365.config.json` と `a365.generated.config.json` の両方を保管しておく（デプロイ・トラブルシュートで使う）。
 
 > CLI で確認するなら（実体はマルチテナントのアプリ登録 `signInAudience=AzureADMultipleOrgs`）:
 >
 > ```powershell
+> # 自分の Blueprint appId を generated config から取得
+> $bpId = (Get-Content a365.generated.config.json | ConvertFrom-Json).agentBlueprintId
 > # ① アプリ登録: displayName / appId / audience を確認
-> az ad app show --id e65ce763-b70a-4991-854c-788c2862fb08 `
+> az ad app show --id $bpId `
 >   --query "{displayName:displayName, appId:appId, audience:signInAudience}" -o json
 > # ② サービスプリンシパル: displayName / type / enabled を確認
-> az ad sp show --id e65ce763-b70a-4991-854c-788c2862fb08 `
+> az ad sp show --id $bpId `
 >   --query "{displayName:displayName, type:servicePrincipalType, enabled:accountEnabled}" -o json
 > ```
 >
@@ -347,14 +349,14 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
 >
 > | コマンド | キー | 期待値 |
 > |---|---|---|
-> | ① app | `displayName` | `custom-maf-agent-a365 Blueprint` |
-> | ① app | `appId` | `e65ce763-b70a-4991-854c-788c2862fb08` |
+> | ① app | `displayName` | `custom-maf-agent-a365-userNN Blueprint` |
+> | ① app | `appId` | 自分の `$bpId`（= `agentBlueprintId`） |
 > | ① app | `audience` | `AzureADMultipleOrgs`（マルチテナント） |
-> | ② sp | `displayName` | `custom-maf-agent-a365 Blueprint` |
+> | ② sp | `displayName` | `custom-maf-agent-a365-userNN Blueprint` |
 > | ② sp | `type` | `Application` |
 > | ② sp | `enabled` | `true`（有効） |
 
-> **作り直したいとき**: `Resource already exists` 等で詰まったら `a365 cleanup`（**破壊的**）→ `a365 setup all` でやり直す。config-free で作った場合は `a365 cleanup --agent-name custom-maf-agent-a365`。
+> **作り直したいとき**: `Resource already exists` 等で詰まったら `a365 cleanup`（**破壊的**）→ `a365 setup all` でやり直す。config-free で作った場合は `a365 cleanup --agent-name custom-maf-agent-a365-userNN`。
 
 ---
 
@@ -369,7 +371,7 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
 > Nothing to publish for blueprint-based agents. Run 'a365 setup all' to register.
 > ```
 >
-> Blueprint が登録済みであることは §4.3(3)（Entra **エージェント > Agent blueprints** に `custom-maf-agent-a365 Blueprint` が **Active** で表示）で確認済み。よって本ラボは **§5・§6 をスキップして §7（ガバナンスの検証）へ進む**。
+> Blueprint が登録済みであることは §4.3(3)（Entra **エージェント > Agent blueprints** に `custom-maf-agent-a365-userNN Blueprint` が **Active** で表示）で確認済み。よって本ラボは **§5・§6 をスキップして §7（ガバナンスの検証）へ進む**。
 
 > **`a365 publish` / `manifest.zip` が要るのはどんな時？**
 > `manifest.zip`（M365 アプリ パッケージ）を生成して管理センターにアップロードする流れは、**Blueprint ベースではないエージェント**向け（例: config-free 登録や `--m365` でメッセージング エンドポイントを持つ M365 アプリ型）。本ラボの `custom-maf-agent-a365` は Blueprint ベースなので該当しない。
