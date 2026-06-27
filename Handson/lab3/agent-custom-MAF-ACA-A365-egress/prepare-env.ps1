@@ -22,7 +22,7 @@
 
 .EXAMPLE
   pwsh .\prepare-env.ps1
-  pwsh .\prepare-env.ps1 -ResourceGroup rg-foundryobs-eastus2 -Force
+  pwsh .\prepare-env.ps1 -Force
 #>
 [CmdletBinding()]
 param(
@@ -33,7 +33,6 @@ param(
     [string]$OutFile     = (Join-Path $PSScriptRoot '.env'),
     # 任意の上書き値（未指定なら az / テンプレート既定値）
     [string]$SubscriptionId,
-    [string]$ResourceGroup,
     # 既存 .env を上書き
     [switch]$Force
 )
@@ -97,7 +96,6 @@ $overrides = @{
 }
 if ($TenantId)       { $overrides['AZURE_TENANT_ID']        = $TenantId }
 if ($SubscriptionId) { $overrides['AZURE_SUBSCRIPTION_ID']  = $SubscriptionId }
-if ($ResourceGroup)  { $overrides['AZURE_RESOURCE_GROUP']   = $ResourceGroup }
 if ($BlueprintAppId) { $overrides['BLUEPRINT_APP_ID']       = $BlueprintAppId }
 if ($AgentIdAppId)   { $overrides['AGENT_IDENTITY_APP_ID']  = $AgentIdAppId }
 if ($Secret)         { $overrides['BLUEPRINT_CLIENT_SECRET'] = $Secret }
@@ -133,5 +131,5 @@ Write-Host "  AGENT_IDENTITY_APP_ID  : $(if ($AgentIdAppId) { $AgentIdAppId } el
 Write-Host "  BLUEPRINT_CLIENT_SECRET: $(if ($overrides.ContainsKey('BLUEPRINT_CLIENT_SECRET')) { '<復号済み・非表示>' } else { '<空・要手入力>' })"
 Write-Host "  USE_AGENT_ID_EGRESS    : false（lab3-1 は SAMI を既定出口に保つ＝配線のみ）" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "AZURE_RESOURCE_GROUP（Foundry の RG）と PROJECT_ENDPOINT / MODEL_DEPLOYMENT_NAME が" -ForegroundColor Yellow
-Write-Host "空の場合は .env を開いて手で埋めてください。次に: pwsh .\deploy-aca.ps1" -ForegroundColor Yellow
+Write-Host "PROJECT_ENDPOINT / MODEL_DEPLOYMENT_NAME が空の場合は .env を開いて手で埋めてください。" -ForegroundColor Yellow
+Write-Host "次に: pwsh .\deploy-aca.ps1" -ForegroundColor Yellow

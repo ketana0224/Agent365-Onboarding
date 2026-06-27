@@ -16,8 +16,8 @@
        ACR + Container Apps 環境 + Container App（外部 HTTPS Ingress, port 8000）を作成
     4. Blueprint クライアント シークレットを ACA シークレット（blueprint-secret）として登録し、
        BLUEPRINT_CLIENT_SECRET=secretref:blueprint-secret で注入
-    5. システム割り当てマネージド ID を有効化し、Foundry アカウントへ「Azure AI Developer」を付与
-       （USE_AGENT_ID_EGRESS=true でも、切り戻し・MCP legacy のために UAMI は確保）
+    5. システム割り当てマネージド ID（SAMI）を有効化（APIM 経由のため Foundry への直接 RBAC は
+       既定では不要。-FoundryResourceGroup を指定したときのみ防御的に「Azure AI Developer」を付与）
     6. 公開 URL をコンソールに出力
 
 .NOTES
@@ -61,10 +61,9 @@ foreach ($line in Get-Content $EnvFile) {
 
 if (-not $SubscriptionId)        { $SubscriptionId        = $envMap['AZURE_SUBSCRIPTION_ID'] }
 if (-not $Location)              { $Location              = if ($envMap['AZURE_LOCATION']) { $envMap['AZURE_LOCATION'] } else { 'eastus2' } }
-if (-not $ResourceGroup)         { $ResourceGroup         = if ($envMap['ACA_RESOURCE_GROUP']) { $envMap['ACA_RESOURCE_GROUP'] } else { $envMap['AZURE_RESOURCE_GROUP'] } }
+if (-not $ResourceGroup)         { $ResourceGroup         = if ($envMap['ACA_RESOURCE_GROUP']) { $envMap['ACA_RESOURCE_GROUP'] } else { 'rg-foundryobs-eastus2' } }
 if (-not $AppName)               { $AppName               = if ($envMap['ACA_APP_NAME']) { $envMap['ACA_APP_NAME'] } else { 'custom-maf-agent-a365-egress' } }
 if (-not $EnvName)               { $EnvName               = if ($envMap['ACA_ENV_NAME']) { $envMap['ACA_ENV_NAME'] } else { 'aca-contoso-agent' } }
-if (-not $FoundryResourceGroup)  { $FoundryResourceGroup  = $envMap['AZURE_RESOURCE_GROUP'] }
 
 $projectEndpoint = $envMap['PROJECT_ENDPOINT']
 $modelDeployment = if ($envMap['AGENT_MODEL_DEPLOYMENT_NAME']) { $envMap['AGENT_MODEL_DEPLOYMENT_NAME'] } else { $envMap['MODEL_DEPLOYMENT_NAME'] }
@@ -216,13 +215,15 @@ if ([string]::IsNullOrWhiteSpace($principalId)) {
 }
 Write-Host "      principalId = $principalId" -ForegroundColor Green
 
-# --- 4. Foundry への RBAC 付与 -------------------------------------------------
-# 注: USE_AGENT_ID_EGRESS=true でも、出口の切り戻しや MCP legacy 経路のために
-#     UAMI に Foundry ロールを付与しておく。
+# --- 4. Foundry への RBAC 付与（任意） -----------------------------------------
+# 注: LLM / MCP は APIM 経由で、Foundry バックエンドへの認可は APIM の MI が担う
+#     （APIM の authentication-managed-identity）。SAMI のトークンは APIM の
+#     validate-azure-ad-token（audience + 発行元のみ検証）を通すだけなので、
+#     Foundry への直接 RBAC は不要。APIM を介さない直叩き経路を残す場合のみ、
+#     -FoundryResourceGroup を指定して防御的に付与する。
 if (-not $SkipRbac) {
     if (-not $FoundryResourceGroup) {
-        Write-Host '[3/5] AZURE_RESOURCE_GROUP（Foundry RG）が不明のため RBAC をスキップします。' -ForegroundColor Yellow
-        Write-Host '       手動で MI に Foundry アカウントへの「Azure AI Developer」を付与してください。' -ForegroundColor Yellow
+        Write-Host '[3/5] -FoundryResourceGroup 未指定のため Foundry RBAC をスキップします（APIM 経由では不要）。' -ForegroundColor DarkGray
     }
     else {
         Write-Host "[3/5] Foundry アカウント（RG: $FoundryResourceGroup）を探索し RBAC を付与..." -ForegroundColor Yellow

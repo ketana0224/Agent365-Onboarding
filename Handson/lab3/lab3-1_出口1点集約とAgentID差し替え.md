@@ -69,13 +69,13 @@ flowchart LR
 
 ```powershell
 cd C:\GitHub\Agent365-Onboarding\Handson\lab3\agent-custom-MAF-ACA-A365-egress
-pwsh .\prepare-env.ps1 -ResourceGroup <Foundry の RG>
+pwsh .\prepare-env.ps1
 # 既存 .env を上書きする場合は -Force
 ```
 
 > Blueprint シークレットの復号は **lab2-3 で `a365 setup all` を実行したのと同一 Windows ユーザー**でのみ成功する。別ユーザー/別マシンでは `BLUEPRINT_CLIENT_SECRET` が空になるので、その値だけ手で補う。
 
-生成後、`AZURE_RESOURCE_GROUP` / `PROJECT_ENDPOINT` / `MODEL_DEPLOYMENT_NAME` が空なら `.env` を開いて埋める（APIM / MCP エンドポイントは `.env.example` の既定値がそのまま入る）。
+生成後、`PROJECT_ENDPOINT` / `MODEL_DEPLOYMENT_NAME` が空なら `.env` を開いて埋める（APIM / MCP エンドポイントは `.env.example` の既定値がそのまま入る）。
 
 ```ini
 # prepare-env.ps1 が自動で入れる値（確認用）
@@ -115,7 +115,7 @@ pwsh .\deploy-aca.ps1
 
 1. `az acr build` で Dockerfile からイメージをビルド（ローカル Docker 不要）
 2. 既存の ACA 環境（`aca-contoso-agent`、Lab2 と共用）に Container App `custom-maf-agent-a365-egress` を作成（外部 HTTPS, port 8000）
-3. **システム割り当て MI（SAMI）を有効化**し、Foundry へ `Azure AI Developer` を付与（＝既定の出口 ID）
+3. **システム割り当て MI（SAMI）を有効化**（＝既定の出口 ID）。APIM 経由のため Foundry への直接 RBAC は不要（`-FoundryResourceGroup` 指定時のみ防御的に `Azure AI Developer` を付与）
 4. Blueprint シークレットを ACA シークレット（`blueprint-secret`）として登録し、`BLUEPRINT_CLIENT_SECRET=secretref:blueprint-secret` で注入
 
 > UAMI の作成・割り当て・Graph 同意は **不要**。既定の出口は Lab2 と同じ SAMI で、Agent ID 側は fmi_path（Blueprint シークレット）が担うため。
