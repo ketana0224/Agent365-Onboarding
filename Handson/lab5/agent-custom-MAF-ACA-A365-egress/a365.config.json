@@ -1,0 +1,9 @@
+{
+  "tenantId": "655bd66a-5001-4cb3-9aad-ce54a27d5d95",
+  "clientAppId": "835261c6-b8bd-412f-b99e-0af3eb9823be",
+  "agentIdentityDisplayName": "custom-maf-agent-a365 Identity",
+  "agentBlueprintDisplayName": "custom-maf-agent-a365 Blueprint",
+  "agentDescription": "custom-maf-agent-a365",
+  "aiTeammate": false,
+  "useBlueprint": true
+}

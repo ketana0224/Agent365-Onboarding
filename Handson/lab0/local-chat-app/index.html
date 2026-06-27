@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contoso サポート — ローカルチャット</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app__header">
+      <div class="app__title">
+        <span class="app__logo" aria-hidden="true">🛟</span>
+        <div>
+          <h1>Contoso サポート</h1>
+          <p class="app__subtitle">custom-maf-agent-a365 ローカルチャット</p>
+        </div>
+      </div>
+      <div class="app__status">
+        <span id="statusDot" class="status-dot status-dot--unknown" title="未接続"></span>
+        <button id="newChatBtn" class="icon-btn" title="新しいチャット">📝 新しいチャット</button>
+        <button id="settingsToggle" class="icon-btn" title="設定">⚙️</button>
+      </div>
+    </header>
+
+    <section id="settings" class="settings settings--hidden">
+      <label class="settings__field">
+        <span>バックエンド URL（エージェントの基底 URL）</span>
+        <input
+          id="backendUrl"
+          type="text"
+          placeholder="http://localhost:8000"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </label>
+      <p class="settings__hint">
+        ローカル起動なら <code>http://localhost:8000</code>、ACA なら
+        <code>https://&lt;app&gt;.azurecontainerapps.io</code> を指定します。
+        ブラウザの CORS を避けるため、リクエストは同一オリジンのプロキシ
+        (<code>serve.py</code>) 経由で <code>{backend}/chat</code> に中継されます。
+      </p>
+      <div class="settings__actions">
+        <button id="healthBtn" class="btn btn--ghost">疎通確認</button>
+        <button id="saveBtn" class="btn">保存</button>
+      </div>
+      <p id="healthResult" class="settings__health"></p>
+    </section>
+
+    <main id="messages" class="messages" aria-live="polite">
+      <div class="welcome">
+        <p>Contoso の返品・配送・支払い・ポイントについて質問できます。</p>
+        <div class="chips">
+          <button class="chip">返品ポリシーを教えて</button>
+          <button class="chip">海外発送はできますか？</button>
+          <button class="chip">分割払いに対応していますか？</button>
+          <button class="chip">ポイントの有効期限は？</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="composer">
+      <textarea
+        id="input"
+        class="composer__input"
+        rows="1"
+        placeholder="メッセージを入力（Enter で送信 / Shift+Enter で改行）"
+      ></textarea>
+      <button id="sendBtn" class="composer__send" title="送信">➤</button>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

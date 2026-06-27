@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+README.md
+scripts/
+deploy-aca.ps1
+smoke_test.py

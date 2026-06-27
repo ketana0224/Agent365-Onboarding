@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+PortalからAPIMに登録.md
