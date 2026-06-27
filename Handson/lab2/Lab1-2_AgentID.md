@@ -333,8 +333,13 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
 > CLI で確認するなら（実体はマルチテナントのアプリ登録 `signInAudience=AzureADMultipleOrgs`）:
 >
 > ```powershell
-> # 自分の Blueprint appId を generated config から取得
-> $bpId = (Get-Content a365.generated.config.json | ConvertFrom-Json).agentBlueprintId
+> # 自分の Blueprint appId を取得する。
+> # 方法A（推奨・PC 非依存）: Entra から displayName で引く。userNN は自分の番号に変更（例 user01）
+> $bp   = "custom-maf-agent-a365-userNN Blueprint"
+> $bpId = (az ad app list --filter "displayName eq '$bp'" --query "[0].appId" -o tsv)
+> # 方法B（setup を実行した同じ PC・同じフォルダなら）: generated config から取得
+> #   $bpId = (Get-Content a365.generated.config.json | ConvertFrom-Json).agentBlueprintId
+> $bpId   # 空でなく GUID が出ることを確認
 > # ① アプリ登録: displayName / appId / audience を確認
 > az ad app show --id $bpId `
 >   --query "{displayName:displayName, appId:appId, audience:signInAudience}" -o json
