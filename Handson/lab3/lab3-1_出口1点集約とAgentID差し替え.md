@@ -75,7 +75,7 @@ pwsh .\prepare-env.ps1
 
 > Blueprint シークレットの復号は **lab2-3 で `a365 setup all` を実行したのと同一 Windows ユーザー**でのみ成功する。別ユーザー/別マシンでは `BLUEPRINT_CLIENT_SECRET` が空になるので、その値だけ手で補う。
 
-生成後、`PROJECT_ENDPOINT` / `MODEL_DEPLOYMENT_NAME` が空なら `.env` を開いて埋める（APIM / MCP エンドポイントは `.env.example` の既定値がそのまま入る）。
+> LLM / MCP は APIM 経由（`APIM_AOAI_ENDPOINT` / `CONTOSO_MCP_URL`、`.env.example` の既定値）で呼ぶため、`PROJECT_ENDPOINT` / `MODEL_DEPLOYMENT_NAME` は空のままで構わない（切り戻し用に残しているだけで lab3 の実行時には未使用）。
 
 ```ini
 # prepare-env.ps1 が自動で入れる値（確認用）

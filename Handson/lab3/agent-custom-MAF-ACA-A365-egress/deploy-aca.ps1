@@ -84,9 +84,10 @@ $blueprintAppId     = $envMap['BLUEPRINT_APP_ID']
 $agentIdAppId       = $envMap['AGENT_IDENTITY_APP_ID']
 $blueprintSecret    = $envMap['BLUEPRINT_CLIENT_SECRET']
 
-if (-not $projectEndpoint) { throw '.env に PROJECT_ENDPOINT がありません。' }
-if (-not $modelDeployment) { throw '.env に MODEL_DEPLOYMENT_NAME / AGENT_MODEL_DEPLOYMENT_NAME がありません。' }
+# PROJECT_ENDPOINT / MODEL_DEPLOYMENT_NAME は APIM 経由化後は未使用（切り戻し用）。
+# LLM は APIM 経由で呼ぶため、APIM のエンドポイントとデプロイ名のみ必須。
 if (-not $apimAoaiEndpoint) { throw '.env に APIM_AOAI_ENDPOINT がありません（APIM 経由化に必須）。' }
+if (-not $apimAoaiDeployment) { throw '.env に APIM_AOAI_DEPLOYMENT がありません（APIM 経由化に必須）。' }
 
 # USE_AGENT_ID_EGRESS=true のときは Agent ID 出口化の必須値を検証する
 $egressOn = $useAgentIdEgress.ToLower() -in @('1', 'true', 'yes')
@@ -123,14 +124,15 @@ az group create -n $ResourceGroup -l $Location --only-show-errors | Out-Null
 # --- 2. Dockerfile でイメージをビルドして Container App をデプロイ ---------------
 Write-Host "[1/5] イメージをビルドして Container App をデプロイ（数分かかります）..." -ForegroundColor Yellow
 $envVars = @(
-    "PROJECT_ENDPOINT=$projectEndpoint",
-    "MODEL_DEPLOYMENT_NAME=$modelDeployment",
-    "AGENT_MODEL_DEPLOYMENT_NAME=$($envMap['AGENT_MODEL_DEPLOYMENT_NAME'])",
     "APIM_AOAI_ENDPOINT=$apimAoaiEndpoint",
     "APIM_AOAI_DEPLOYMENT=$apimAoaiDeployment",
     "USE_AGENT_ID_EGRESS=$useAgentIdEgress",
     "PORT=8000"
 )
+# PROJECT_ENDPOINT / MODEL_DEPLOYMENT_NAME は切り戻し用。設定されている場合のみ渡す。
+if ($projectEndpoint)   { $envVars += "PROJECT_ENDPOINT=$projectEndpoint" }
+if ($modelDeployment)   { $envVars += "MODEL_DEPLOYMENT_NAME=$modelDeployment" }
+if ($envMap['AGENT_MODEL_DEPLOYMENT_NAME']) { $envVars += "AGENT_MODEL_DEPLOYMENT_NAME=$($envMap['AGENT_MODEL_DEPLOYMENT_NAME'])" }
 if ($apimAoaiApiVersion) { $envVars += "APIM_AOAI_API_VERSION=$apimAoaiApiVersion" }
 if ($apimScope)         { $envVars += "APIM_SCOPE=$apimScope" }
 if ($mcpResourceAppId)  { $envVars += "MCP_RESOURCE_APP_ID=$mcpResourceAppId" }
