@@ -277,40 +277,7 @@ Get-Content a365.generated.config.json | ConvertFrom-Json | Format-List `
 | `resourceConsents[*].inheritablePermissionsConfigured` | `true` | インスタンスへ継承される |
 | `completed` | `true` | setup 完了（同意未了だと `false`） |
 
-**(2) Azure リソースを確認**（**ACA 版** / 任意・トラブルシュート用）:
-
-> §3.3 のスモークテストが通っていれば、ACA のデプロイ・MI・公開 FQDN はすべて成立済みのため**このステップは省略してよい**。エージェントが応答しない場合の切り分けに使う。
-
-```powershell
-cd C:\GitHub\Agent365-Onboarding\_report\Handson\lab2\agent-custom-MAF-ACA-A365
-pwsh -NoProfile -File ./verify-azure-resources.ps1
-```
-
-[verify-azure-resources.ps1](agent-custom-MAF-ACA-A365/verify-azure-resources.ps1) が確認すること（読み取り専用）:
-
-1. リソース グループ内のリソース一覧（`az resource list ... --output table`）
-2. ACA 本体のプロビジョニング状態・公開 FQDN（`az containerapp show`）
-3. ACA の**システム割り当て MI**（`az containerapp identity show` → `principalId`）
-
-> **MI への Foundry ロール（`Azure AI Developer`）は本ラボの APIM 経由構成では不要。** モデル/MCP は APIM AI Gateway 経由で呼ばれ、MI は `cognitiveservices` の token を取得するだけ（RBAC 不要）。Foundry への RBAC は APIM 自身の MI が保持する。verify スクリプトが「ロール割り当てなし」と表示しても**正常**。
-
-実測の確認結果（本ラボ）:
-
-| 確認項目 | 値 |
-|---|---|
-| ACA `custom-maf-agent-a365` | `provisioningState = Succeeded` |
-| FQDN | `https://custom-maf-agent-a365.proudflower-d41f2cf1.eastus2.azurecontainerapps.io` |
-| システム割り当て MI principalId | `18b76884-e692-43e9-9b7b-ebb08c326d2c` |
-
-> 手動で確認する場合:
->
-> ```powershell
-> az resource list --resource-group rg-userNN --output table   # 例 rg-user01
-> # ACA の MI が有効か
-> az containerapp identity show --name custom-maf-agent-a365-userNN --resource-group rg-userNN
-> ```
-
-**(3) Entra 登録を確認**:
+**(2) Entra 登録を確認**:
 
 確認手順（UI）:
 
@@ -358,6 +325,39 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
 > | ② sp | `displayName` | `custom-maf-agent-a365-userNN Blueprint` |
 > | ② sp | `type` | `Application` |
 > | ② sp | `enabled` | `true`（有効） |
+
+**(3) Azure リソースを確認**（**ACA 版** / 任意・トラブルシュート用）:
+
+> §3.3 のスモークテストが通っていれば、ACA のデプロイ・MI・公開 FQDN はすべて成立済みのため**このステップは省略してよい**。エージェントが応答しない場合の切り分けに使う。
+
+```powershell
+cd C:\GitHub\Agent365-Onboarding\_report\Handson\lab2\agent-custom-MAF-ACA-A365
+pwsh -NoProfile -File ./verify-azure-resources.ps1
+```
+
+[verify-azure-resources.ps1](agent-custom-MAF-ACA-A365/verify-azure-resources.ps1) が確認すること（読み取り専用）:
+
+1. リソース グループ内のリソース一覧（`az resource list ... --output table`）
+2. ACA 本体のプロビジョニング状態・公開 FQDN（`az containerapp show`）
+3. ACA の**システム割り当て MI**（`az containerapp identity show` → `principalId`）
+
+> **MI への Foundry ロール（`Azure AI Developer`）は本ラボの APIM 経由構成では不要。** モデル/MCP は APIM AI Gateway 経由で呼ばれ、MI は `cognitiveservices` の token を取得するだけ（RBAC 不要）。Foundry への RBAC は APIM 自身の MI が保持する。verify スクリプトが「ロール割り当てなし」と表示しても**正常**。
+
+実測の確認結果（本ラボ）:
+
+| 確認項目 | 値 |
+|---|---|
+| ACA `custom-maf-agent-a365` | `provisioningState = Succeeded` |
+| FQDN | `https://custom-maf-agent-a365.proudflower-d41f2cf1.eastus2.azurecontainerapps.io` |
+| システム割り当て MI principalId | `18b76884-e692-43e9-9b7b-ebb08c326d2c` |
+
+> 手動で確認する場合:
+>
+> ```powershell
+> az resource list --resource-group rg-userNN --output table   # 例 rg-user01
+> # ACA の MI が有効か
+> az containerapp identity show --name custom-maf-agent-a365-userNN --resource-group rg-userNN
+> ```
 
 > **作り直したいとき**: `Resource already exists` 等で詰まったら `a365 cleanup`（**破壊的**）→ `a365 setup all` でやり直す。config-free で作った場合は `a365 cleanup --agent-name custom-maf-agent-a365-userNN`。
 
