@@ -330,8 +330,6 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
    | **Blueprint object ID** | `e65ce763-…`（app ID と同値） |
    | **Blueprint principal object ID** | `d96dee9c-…`（自分の値は `agentBlueprintServicePrincipalObjectId`） |
 
-> Graph 権限（Mail.Send / Chat.ReadWrite / Files.ReadWrite.All 等）の付与・同意状況は、Agents ブレードの詳細ページには出ない。`a365.generated.config.json`（§4.2 のチェック）で確認するか、下記 CLI を使う。手動の FIC 設定は不要。`a365.config.json` と `a365.generated.config.json` の両方を保管しておく（デプロイ・トラブルシュートで使う）。
-
 > CLI で確認するなら（実体はマルチテナントのアプリ登録 `signInAudience=AzureADMultipleOrgs`）:
 >
 > ```powershell
