@@ -277,7 +277,9 @@ Get-Content a365.generated.config.json | ConvertFrom-Json | Format-List `
 | `resourceConsents[*].inheritablePermissionsConfigured` | `true` | インスタンスへ継承される |
 | `completed` | `true` | setup 完了（同意未了だと `false`） |
 
-**(2) Azure リソースを確認**（**ACA 版**）:
+**(2) Azure リソースを確認**（**ACA 版** / 任意・トラブルシュート用）:
+
+> §3.3 のスモークテストが通っていれば、ACA のデプロイ・MI・公開 FQDN はすべて成立済みのため**このステップは省略してよい**。エージェントが応答しない場合の切り分けに使う。
 
 ```powershell
 cd C:\GitHub\Agent365-Onboarding\_report\Handson\lab2\agent-custom-MAF-ACA-A365
@@ -289,7 +291,8 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
 1. リソース グループ内のリソース一覧（`az resource list ... --output table`）
 2. ACA 本体のプロビジョニング状態・公開 FQDN（`az containerapp show`）
 3. ACA の**システム割り当て MI**（`az containerapp identity show` → `principalId`）
-4. その MI のロール割り当て（Foundry への **`Azure AI Developer`** が付与済みか）
+
+> **MI への Foundry ロール（`Azure AI Developer`）は本ラボの APIM 経由構成では不要。** モデル/MCP は APIM AI Gateway 経由で呼ばれ、MI は `cognitiveservices` の token を取得するだけ（RBAC 不要）。Foundry への RBAC は APIM 自身の MI が保持する。verify スクリプトが「ロール割り当てなし」と表示しても**正常**。
 
 実測の確認結果（本ラボ）:
 
@@ -298,7 +301,6 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
 | ACA `custom-maf-agent-a365` | `provisioningState = Succeeded` |
 | FQDN | `https://custom-maf-agent-a365.proudflower-d41f2cf1.eastus2.azurecontainerapps.io` |
 | システム割り当て MI principalId | `18b76884-e692-43e9-9b7b-ebb08c326d2c` |
-| ロール | `Azure AI Developer` → Foundry アカウント `aif-foundryobs-jyenh` ✅ |
 
 > 手動で確認する場合:
 >

@@ -95,8 +95,8 @@ if ($mi -and $mi.principalId) {
 }
 Write-Host ""
 
-# --- 4) MI のロール割り当て ---
-Write-Host "===== 4) MI に付与されたロール割り当て =====" -ForegroundColor Green
+# --- 4) MI のロール割り当て（APIM 経由構成では参考情報） ---
+Write-Host "===== 4) MI に付与されたロール割り当て（APIM 経由なら不要） =====" -ForegroundColor Green
 if ($principalId) {
     $roles = az role assignment list --assignee $principalId --all -o json 2>$null | ConvertFrom-Json
     if ($roles) {
@@ -104,16 +104,12 @@ if ($principalId) {
             Write-Host "  - $($_.roleDefinitionName)" -ForegroundColor White
             Write-Host "      scope: $($_.scope)" -ForegroundColor DarkGray
         }
-        if ($roles | Where-Object { $_.roleDefinitionName -eq 'Azure AI Developer' }) {
-            Write-Host ""
-            Write-Host "  ✅ Azure AI Developer 付与済み（Foundry 推論用）" -ForegroundColor Green
-        } else {
-            Write-Host ""
-            Write-Host "  ⚠ Azure AI Developer が見つかりません（モデル呼び出しが 401/403 になる可能性）" -ForegroundColor Yellow
-        }
     } else {
-        Write-Host "  ロール割り当てなし。" -ForegroundColor Yellow
+        Write-Host "  ロール割り当てなし。" -ForegroundColor DarkGray
     }
+    Write-Host ""
+    Write-Host "  ℹ 本ラボはモデル/MCP を APIM AI Gateway 経由で呼ぶため、MI への Foundry ロール（Azure AI Developer）は不要です。" -ForegroundColor DarkGray
+    Write-Host "    （MI は cognitiveservices の token を取得するだけ。Foundry への RBAC は APIM 自身の MI が保持します。ロールなしでも正常です。）" -ForegroundColor DarkGray
 } else {
     Write-Host "  （MI が無いためスキップ）" -ForegroundColor DarkGray
 }
