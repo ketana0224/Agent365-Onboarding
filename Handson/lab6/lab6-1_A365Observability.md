@@ -116,25 +116,21 @@ lab6 は **lab5 の変化点**なので、Agent ID 等の発行（`scripts\01〜
 # (1) lab5 の .env をコピー（lab5 を同マシンで実施済みなら最速）
 Copy-Item ..\..\lab5\agent-custom-MAF-ACA-A365-obo\.env .env
 
-#   別マシン / lab5 未実施なら、このフォルダの prepare-env.ps1 で生成:
-#   pwsh .\prepare-env.ps1 -Me userNN   # 例: user01。lab2 config + 同一 Windows ユーザーが必要
-
 # (2) 計装入りイメージを再ビルドして稼働アプリへ差し替える
 pwsh .\deploy-aca.ps1
 ```
 
 `deploy-aca.ps1` は `.env` を読んで、(a) 計装入りの新イメージを `az acr build` で焼き直し、(b) 受講者ごとの `rg-<userNN>` / `custom-maf-a365-obo-<userNN>` / ACR を解決し、(c) 既に在るアプリなら `az containerapp update --image …` で差し替える。
 
-> `prepare-env.ps1`（B）は Blueprint シークレットを **DPAPI(CurrentUser)** で復号するため、lab2 で `a365 setup all` を実行したのと同じ Windows ユーザーでのみ成功する。別マシン/別ユーザーでは A（lab5 の `.env` をコピー）を使う。
-
 > **スパン用 ID の env は追加不要**。`config.observability_agent_id()` / `observability_tenant_id()` は `AGENT365OBSERVABILITY__AGENTID` / `__TENANTID` が無ければ、`deploy-aca.ps1` が既に投入する **`AGENT_IDENTITY_APP_ID`（インスタンス appId）/ `AZURE_TENANT_ID`** にフォールバックする。別テナント/別 ID をスパンに刻みたい場合だけ、明示の上書きとして次を足す:
 >
 > ```powershell
-> $Me = 'user01'  # 自分の受講者番号
-> az containerapp update -g "rg-$Me" -n "custom-maf-a365-obo-$Me" `
+> # .env から rg / アプリ名 / インスタンス appId / テナント GUID をすべて自動取得（プレースホルダ・$Me 不要）
+> $envMap = @{}; Get-Content .\.env | Where-Object { $_ -match '=' -and $_ -notmatch '^\s*#' } | ForEach-Object { $k,$v = $_ -split '=',2; $envMap[$k.Trim()] = $v.Trim() }
+> az containerapp update -g $envMap['ACA_RESOURCE_GROUP'] -n $envMap['ACA_APP_NAME'] `
 >   --set-env-vars `
->     AGENT365OBSERVABILITY__AGENTID=<インスタンス appId> `
->     AGENT365OBSERVABILITY__TENANTID=<顧客テナント GUID>
+>     "AGENT365OBSERVABILITY__AGENTID=$($envMap['AGENT_IDENTITY_APP_ID'])" `
+>     "AGENT365OBSERVABILITY__TENANTID=$($envMap['AZURE_TENANT_ID'])"
 > ```
 >
 > ⚠️ ここに **Blueprint appId** を入れると **403 Agent ID mismatch**。必ず**インスタンス（Agent Identity）の appId**（`.env` の `AGENT_IDENTITY_APP_ID` と同値）を使う。
