@@ -113,5 +113,15 @@ Write-Host 'chat-ui-obo/.env に次を設定:' -ForegroundColor Cyan
 Write-Host "  AAD_CLIENT_ID=$appId"
 Write-Host "  BLUEPRINT_APP_ID=$BlueprintAppId"
 Write-Host ''
-Write-Host '次に 02 スクリプトを実行（Blueprint を OAuth API 化 + preAuthorizedApplications 登録）:'
-Write-Host "  pwsh scripts/02_patch-blueprint-as-oauth-api.ps1 -BlueprintAppId $BlueprintAppId -ClientAppId $appId"
+if ($scopeId) {
+    # access_as_user が確定済み（=02 実行後の再実行）→ requiredResourceAccess は配線済み。次は 03。
+    Write-Host 'requiredResourceAccess（access_as_user 要求）を配線しました。' -ForegroundColor Green
+    Write-Host '次に 03 スクリプトを実行（Agent Identity SP に Graph 委任 User.Read / User.ReadBasic.All を付与）:'
+    Write-Host '  pwsh .\03_grant-agentid-graph-delegated.ps1'
+}
+else {
+    # access_as_user 未確定（=初回）→ 先に 02 でスコープを作る。
+    Write-Host '次に 02 スクリプトを実行（Blueprint を OAuth API 化 + preAuthorizedApplications 登録）:'
+    Write-Host "  pwsh .\02_patch-blueprint-as-oauth-api.ps1 -BlueprintAppId $BlueprintAppId -ClientAppId $appId"
+    Write-Host '  （02 実行後、本スクリプト 01 を同じ -DisplayName で再実行すると requiredResourceAccess が配線され、次は 03 が案内されます）'
+}

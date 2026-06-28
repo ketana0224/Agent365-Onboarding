@@ -32,7 +32,7 @@ sequenceDiagram
 
     U->>U: MSAL でサインイン<br/>scope=api://{blueprint}/access_as_user
     U->>A: POST /obo-chat<br/>Authorization: Bearer <user_token>
-    A->>A: validate_user_token<br/>(iss / aud=api://{blueprint} / scp=access_as_user)
+    A->>A: validate_user_token<br/>(iss / aud=api://{blueprint} または {blueprint}(GUID) / scp=access_as_user)
     Note over A,E: Step 1（自律型と共通）
     A->>E: client_credentials + fmi_path=<AgentId appId><br/>scope=api://AzureADTokenExchange/.default
     E-->>A: 親トークン (aud=api://AzureADTokenExchange)
@@ -144,8 +144,6 @@ pwsh .\03_grant-agentid-graph-delegated.ps1
 
 > **実行順の注意（重要）**: `02` は `preAuthorizedApplications` にクライアント アプリを登録するため、**先に `01` でクライアント アプリ（`contoso-obo-chat-ui-userNN`）を作成して appId を得てから `02` に `-ClientAppId` で渡す**。一方で `01` の `requiredResourceAccess`（Blueprint の `access_as_user` 要求）は `02` がスコープを作って初めて確定するため、**`01` → `02` → `01`（再実行）** の順で流すと両方が配線される。`01` 再実行時も**同じ `-DisplayName contoso-obo-chat-ui-userNN`** を指定して同一アプリを更新すること（名前が変わると別アプリが作られる）。控えた Client App ID は `chat-ui-obo/.env` の `AAD_CLIENT_ID` と `test-obo-end-to-end.ps1` でも使う。
 
-> **`.env` 生成（1 節）でも同じ `-DisplayName` を渡す**: `04_generate-chat-ui-env.ps1` はクライアント アプリを displayName で検索するため、`-DisplayName "contoso-obo-chat-ui-$me"` を付けて自分のアプリを解決させる（既定の `contoso-obo-chat-ui` のままだと他人のアプリや未存在で外す）。
-
 | スクリプト | 役割 | 自動解決 |
 |---|---|---|
 | `01_register-obo-client-app.ps1` | OBO 用 Public Client（`contoso-obo-chat-ui-userNN`, redirect=`http://localhost`/`:8501`）を登録し `access_as_user` を要求 | `agentBlueprintId` を lab2 から／**`-DisplayName` に `-userNN` を付ける（衝突回避）** |
@@ -183,7 +181,7 @@ AGENT_IDENTITY_APP_ID=<lab2 の Agent Identity appId>
 BLUEPRINT_CLIENT_SECRET=<DPAPI 復号した Blueprint シークレット>
 
 # --- OBO 用（lab5 で追加） ---
-BLUEPRINT_API_AUDIENCE=api://<lab2 の Blueprint appId>   # ユーザートークンの aud 検証に使う
+BLUEPRINT_API_AUDIENCE=api://<lab2 の Blueprint appId>   # ユーザートークンの aud 検証に使う（検証側は api:// 形式と GUID 形式の両方を受理。requestedAccessTokenVersion=2 のため実際の aud は GUID）
 GRAPH_SCOPE=https://graph.microsoft.com/.default          # OBO で取る Graph トークンの scope
 ```
 

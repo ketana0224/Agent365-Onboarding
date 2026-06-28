@@ -7,7 +7,10 @@ Authorization: Bearer <user_token> を検証する。
 検証ポイント:
   - 署名（Entra ID の JWKS で RS256）
   - iss = https://login.microsoftonline.com/{tenant}/v2.0
-  - aud = api://{blueprint_app_id}（または BLUEPRINT_API_AUDIENCE）
+  - aud = api://{blueprint_app_id} または {blueprint_app_id}（GUID）
+        （Blueprint の requestedAccessTokenVersion により v1=api:// / v2=GUID と
+         aud 形式が変わるため、両形式を受理する。BLUEPRINT_API_AUDIENCE 指定時は
+         その値も追加で許可する。）
   - exp が現在より未来
   - scp に access_as_user を含む
 
@@ -57,7 +60,12 @@ def validate_user_token(token: str, *, require_scope: str = "access_as_user") ->
         return _claims_cache[token]
 
     issuer = f"https://login.microsoftonline.com/{config.tenant_id()}/v2.0"
-    audience = config.blueprint_api_audience()
+    # v1 トークンは aud=api://{bp}、v2 トークンは aud={bp}（GUID）になる。
+    # Blueprint の requestedAccessTokenVersion に依存せず通すため両形式を許可する。
+    _bp = config.blueprint_app_id()
+    audiences = list(dict.fromkeys(
+        [config.blueprint_api_audience(), f"api://{_bp}", _bp]
+    ))
 
     try:
         signing_key = _jwks().get_signing_key_from_jwt(token).key
@@ -65,7 +73,7 @@ def validate_user_token(token: str, *, require_scope: str = "access_as_user") ->
             token,
             signing_key,
             algorithms=["RS256"],
-            audience=audience,
+            audience=audiences,
             issuer=issuer,
             options={"require": ["exp", "iss", "aud"]},
         )
@@ -73,7 +81,7 @@ def validate_user_token(token: str, *, require_scope: str = "access_as_user") ->
         raise UserTokenError(f"トークンの有効期限切れ: {e}") from e
     except jwt.InvalidAudienceError as e:
         raise UserTokenError(
-            f"aud 不一致（期待 {audience}）: ユーザートークン取得時に scope を "
+            f"aud 不一致（許可 {audiences}）: ユーザートークン取得時に scope を "
             f"api://{config.blueprint_app_id()}/access_as_user に指定してください"
         ) from e
     except jwt.InvalidTokenError as e:

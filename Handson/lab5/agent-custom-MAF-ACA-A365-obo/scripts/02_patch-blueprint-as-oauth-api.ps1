@@ -12,8 +12,10 @@
       4. optionalClaims.accessToken : idtyp（user/app 判別用）
       5. api.requestedAccessTokenVersion = 2
 
-    既存値があれば保持しつつマージ更新する。これにより、ユーザー トークンの
-    aud が api://{blueprint} になり、エージェント側 OBO の user_assertion として使える。
+    既存値があれば保持しつつマージ更新する。requestedAccessTokenVersion = 2 により
+    ユーザー トークンは v2 形式となり、aud は api://{blueprint} ではなく Blueprint の
+    appId（GUID）になる。エージェント側の OBO 検証（obo_validator.py）は api:// 形式と
+    GUID 形式の両方を受理するため、どちらのトークンバージョンでも user_assertion として使える。
 
 .PARAMETER BlueprintAppId
     lab2 の a365.generated.config.json の agentBlueprintId。未指定なら自動解決。
