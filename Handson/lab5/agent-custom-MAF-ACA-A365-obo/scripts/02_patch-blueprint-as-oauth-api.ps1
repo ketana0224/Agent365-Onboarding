@@ -66,6 +66,14 @@ if (-not $scope) {
 }
 $scopeId = $scope.id
 
+# 既存スコープ（a365 由来の access_agent_as_user 等）を保持したままマージする。
+# 既存の有効スコープを送らずに上書きすると
+# CannotDeleteOrUpdateEnabledEntitlement で拒否されるため。
+$mergedScopes = @($existingScopes)
+if (-not ($existingScopes | Where-Object { $_.value -eq 'access_as_user' })) {
+    $mergedScopes = @($existingScopes + $scope)
+}
+
 # preAuthorizedApplications
 $existingPreAuth = @()
 if ($app.api -and $app.api.preAuthorizedApplications) { $existingPreAuth = @($app.api.preAuthorizedApplications) }
@@ -109,22 +117,40 @@ $optional = @{
 $body = @{
     identifierUris  = @($identifierUri)
     api             = @{
-        oauth2PermissionScopes    = @($scope)
-        preAuthorizedApplications = $preAuth
+        oauth2PermissionScopes    = $mergedScopes
         requestedAccessTokenVersion = 2
     }
     optionalClaims  = $optional
 } | ConvertTo-Json -Depth 12 -Compress
 
-$tmp = New-TemporaryFile
-try {
-    Set-Content -Path $tmp -Value $body -Encoding utf8 -NoNewline
-    az rest --method PATCH `
-        --uri "https://graph.microsoft.com/v1.0/applications/$objectId" `
-        --headers 'Content-Type=application/json' `
-        --body "@$($tmp.FullName)" --only-show-errors | Out-Null
+function Invoke-AppPatch([string]$ObjectId, [string]$Json) {
+    $tmp = New-TemporaryFile
+    try {
+        Set-Content -Path $tmp -Value $Json -Encoding utf8 -NoNewline
+        az rest --method PATCH `
+            --uri "https://graph.microsoft.com/v1.0/applications/$ObjectId" `
+            --headers 'Content-Type=application/json' `
+            --body "@$($tmp.FullName)" --only-show-errors | Out-Null
+    }
+    finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
 }
-finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+
+# Phase 1: identifierUri / scope / tokenVersion / optionalClaims を先に確定する。
+#   preAuthorizedApplications.delegatedPermissionIds は「永続化済みスコープ」しか
+#   参照できず、新規 scopeId を同一 PATCH で参照すると Graph が
+#   "Permission Id cannot be found in the AppPermissions sets" で全体を拒否する。
+Invoke-AppPatch $objectId $body
+
+# Phase 2: 永続化済みスコープを参照して preAuthorizedApplications を追加する。
+#   api プロパティは置換されるため oauth2PermissionScopes / tokenVersion も再送する。
+$body2 = @{
+    api = @{
+        oauth2PermissionScopes      = $mergedScopes
+        requestedAccessTokenVersion = 2
+        preAuthorizedApplications   = $preAuth
+    }
+} | ConvertTo-Json -Depth 12 -Compress
+Invoke-AppPatch $objectId $body2
 
 Write-Host ''
 Write-Host '== 完了 ==' -ForegroundColor Cyan
