@@ -100,7 +100,7 @@ python smoke_test.py https://custom-maf-a365-egress-userNN.<env>.eastus2.azureco
 > 補足: **リスク連動**でブロックする場合、OBO フローでは異常挙動のリスクが **エージェントではなくサインインしたユーザー** に帰属するため、**エージェント リスク条件（`agentIdRiskLevels`）の CA は発火しない**（ユーザー リスクの CA 側で処理される）。本ラボの autonomous fmi_path はエージェントにリスクが帰属するので、エージェント リスク条件でも発火する。
 > 出典: [ID Protection for agents — Activities contributing to risk](https://learn.microsoft.com/entra/id-protection/concept-risky-agents#activities-contributing-to-risk) ／ [CA テンプレート](https://aka.ms/CreateAgentRiskPolicy)。
 
-> 📎 **Purview / Defender の自動適用は本ラボでは扱わない（後の Lab で実施）**。本ラボの ACA egress 版（出口のみ実装）は M365 経由の対話を出さないため Purview/Defender に名前で載らない。Teams 往復で M365 インタラクションを出す **[Lab6-2（Purview / Defender の自動適用）](../lab6/lab6-2_Purview_Defender自動適用.md)** で実施する。
+> 📎 **Purview / Defender の自動適用は本ラボでは扱わない（後の Lab で実施）**。本ラボの ACA egress 版（出口のみ実装）は M365 経由の対話を出さないため Purview/Defender に名前で載らない。Teams 往復で M365 インタラクションを出す **[Lab7-2（Purview / Defender の自動適用）](../lab7/lab7-2_Purview_Defender自動適用.md)** で実施する。
 
 ---
 

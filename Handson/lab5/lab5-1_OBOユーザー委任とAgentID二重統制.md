@@ -259,6 +259,32 @@ OBO 実行後は `events` に **`step2b_obo_token`**（OBO 交換の結果）が
 
 > `idtyp=user` が OBO の証跡。自律型（Step 2a）は `idtyp=app`。
 
+##### 出力を見やすくする（PowerShell）
+
+生の JSON は 1 行で読みにくいので、`ConvertFrom-Json | ConvertTo-Json` で整形するか、フェーズだけ表にすると確認しやすい。
+
+```powershell
+# 整形して全体を見る
+curl https://<your-app-fqdn>/debug/auth | ConvertFrom-Json | ConvertTo-Json -Depth 6
+
+# フェーズ・aud・idtyp・scope だけ表で見る
+(curl https://<your-app-fqdn>/debug/auth | ConvertFrom-Json).events |
+  Select-Object phase,
+    @{n='aud';e={$_.token.aud}},
+    @{n='idtyp';e={$_.token.idtyp}},
+    @{n='scope';e={$_.scope}} | Format-Table -Auto
+```
+
+表の見え方（OBO 実行後の例）:
+
+| phase | aud | idtyp | 意味 |
+|---|---|---|---|
+| `step1_parent_token` | `fb60f99c-…`(AzureADTokenExchange) | app | Blueprint が fmi_path で Agent Identity の親トークン取得 |
+| `step2a_autonomous_token` | `https://cognitiveservices.azure.com` | app | 自律型出口（LLM 用・Agent ID 本人の権限） |
+| `step2b_obo_token` | `https://graph.microsoft.com` | **user** | OBO 出口（ユーザー委任・`scp` にユーザースコープ・`oid` が本人） |
+
+> `step2a`（app）と `step2b`（user）が**両方**並ぶのが、自律権限とユーザー委任を二重に統制できている証跡。
+
 ---
 
 ## ガバナンス試験｜OBO は「二重」に止まる

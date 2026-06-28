@@ -1,8 +1,8 @@
-# Lab6-2: Purview / Defender の自動適用（自動統制の確認）
+# Lab7-2: Purview / Defender の自動適用（自動統制の確認）
 
-> 前提: [Lab6-1（`Lab1-3_m365.md`）](Lab1-3_m365.md) で、エージェントを Teams のメッセージング エンドポイント（`/api/messages`）に接続し、**実ターンの往復（§6）** を成立させていること。
+> 前提: [Lab7-1（`Lab1-3_m365.md`）](Lab1-3_m365.md) で、エージェントを Teams のメッセージング エンドポイント（`/api/messages`）に接続し、**実ターンの往復（§6）** を成立させていること。
 
-## 0. なぜ Lab6 で確認するのか
+## 0. なぜ Lab7 で確認するのか
 
 Teams 往復で、このエージェントは **Microsoft 365 を経由した実インタラクション**を発生させる。これにより、追加コードなしで Purview / Defender 側が当該エージェント（Instance SP `3cdf5ac9…`）の対話を監査・監視に取り込む。
 
@@ -14,7 +14,7 @@ Teams 往復で、このエージェントは **Microsoft 365 を経由した実
 
 1. [Microsoft Purview ポータル](https://purview.microsoft.com) → **監査（Audit）> 監査の検索** を開く。
 2. 検索条件:
-   - **日付範囲**: Lab6-1 §6 で Teams 往復した時間帯。
+   - **日付範囲**: Lab7-1 §6 で Teams 往復した時間帯。
    - **レコードの種類 / アクティビティ**: `ConnectedAIAppInteraction`（AI アプリの対話）を含めて検索。絞り込みが難しい場合はまず期間だけで検索する。
 3. 結果に **`ConnectedAIAppInteraction`** 行が並ぶことを確認。ユーザー列は **対話した M365 ユーザー**（Teams の送信者）として記録される。
    - ※ 監査ログには取込遅延（数分〜最大数十分）がある。出なければ時間を置いて再検索。
@@ -45,7 +45,7 @@ Teams 往復で、このエージェントは **Microsoft 365 を経由した実
    ```
    - **テーブル名は実機では `AgentsInfo`**（スキーマ ツリーの **「エージェント」** カテゴリ配下。ドキュメント表記の `AIAgentsInfo` ではない・2026-06 実機）。列は `Name`／`EntraAgentID`（＝Agent ID の appId）／`EntraBlueprintID`／`Platform`／`PublishedStatus`／`LifecycleStatus` など。
    - エージェント名が分からなければ `EntraAgentID == "<appId>"` で直接絞れる。
-5. Lab6-1 §6 のエージェント アクティビティ（ツール呼び出し / データ アクセス）が監視ログに乗っていることを確認:
+5. Lab7-1 §6 のエージェント アクティビティ（ツール呼び出し / データ アクセス）が監視ログに乗っていることを確認:
    ```kusto
    CloudAppEvents
    | where Timestamp > ago(1d)

@@ -72,7 +72,7 @@ a365 setup all --agent-name "custom-maf-agent-a365-$me"
 > **Agent ID Developer で実行**: OAuth2 の管理者同意だけは別ステップ。CLI が出力する **同意 URL を Global Administrator に共有**してもらう（完了まで `resourceConsents` が空・`completed: false` のことがある）。
 
 > M365 エージェント（Teams/Copilot）としてメッセージング エンドポイントも自動登録したい場合は `a365 setup all --m365` を使う。AI teammate は `--aiteammate`（このモードだけ `a365.config.json` を**実行前に手書き**で用意する必要がある。素のエージェント モードでは CLI が `a365.config.json` を自動生成するので手書き不要）。
-> 本ラボは素の `a365 setup all` で **Agent ID の発行と統制（§7）**まで。Teams からの実メッセージ往復（メッセージング エンドポイント登録）は後付け工程として [Lab1-3](../lab6/Lab1-3_m365.md) にまとめた。
+> 本ラボは素の `a365 setup all` で **Agent ID の発行と統制（§7）**まで。Teams からの実メッセージ往復（メッセージング エンドポイント登録）は後付け工程として [Lab1-3](../lab7/Lab1-3_m365.md) にまとめた。
 
 ### 4.3 作成結果の検証
 
