@@ -107,16 +107,27 @@ get_tracer_provider().add_span_processor(
 
 > ⚠️ `agent_id` は **Agent Identity（インスタンス）の appId**。Blueprint を入れると **403 Agent ID mismatch**。`config.observability_agent_id()` は env `AGENT365OBSERVABILITY__AGENTID`→無ければ出口化と同じインスタンス appId にフォールバックする。
 
-### デプロイ
+### デプロイ（Lab5 稼働アプリへの差分更新）
 
-スパンに必要な ID だけを ACA に転記する（ON/OFF フラグは不要）。
+lab6 は **lab5 の変化点**なので、フルデプロイ（`prepare-env.ps1` → `.env` → `deploy-aca.ps1`）はやり直さない。**`prepare-env.ps1` も不要**で、lab5 で生成済みの `.env`（APIM / MCP / OBO / Agent ID など）をそのまま流用できる。lab6 の作業は **2 つだけ**:
+
+1. **計装入りの新イメージをビルド**する（env を足すだけでは計装は効かない。`microsoft-opentelemetry` 初期化コードが入った `-obs` フォルダのイメージを ACR に焼く）。
+2. 稼働中アプリに **新イメージ + スパン用 ID 2 つ**を差し替える（ON/OFF フラグは無く常時計装）。
 
 ```powershell
+# このフォルダ（agent-custom-MAF-ACA-A365-obo-obs）で実行
+# ① 計装入りイメージをビルド（<acr> は lab5 と同じ ACR 名）
+az acr build -r <acr> -t custom-maf-a365-obo:obs --file Dockerfile .
+
+# ② 新イメージ + スパン用 ID 2 つを稼働アプリへ差し替え
 az containerapp update -g rg-foundryobs-eastus2 -n custom-maf-agent-a365-obo `
+  --image <acr>.azurecr.io/custom-maf-a365-obo:obs `
   --set-env-vars `
     AGENT365OBSERVABILITY__AGENTID=$env:AGENT365OBSERVABILITY__AGENTID `
     AGENT365OBSERVABILITY__TENANTID=655bd66a-5001-4cb3-9aad-ce54a27d5d95
 ```
+
+> `$env:AGENT365OBSERVABILITY__AGENTID` は **インスタンス（Agent Identity）の appId**。lab5 の `.env` の `AGENT_IDENTITY_APP_ID` と同じ値を `$env:` に入れておく（`$env:AGENT365OBSERVABILITY__AGENTID = '<agenticAppId>'`）。Blueprint appId を入れると **403 Agent ID mismatch**。
 
 その後、[local-chat-app](../lab0/local-chat-app/) 等で **1〜2 往復**会話し、`invoke_agent`（ルート）/ `chat` / `execute_tool` のスパン ツリーを発生させる。
 
