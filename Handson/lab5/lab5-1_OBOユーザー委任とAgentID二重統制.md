@@ -116,17 +116,18 @@ token = await _get_agent_id_provider().get_obo_token(
 
 ## 手順
 
-### 0. Entra 側の OBO 設定（受講者共通・一度だけ）
+### 0. Entra 側の OBO 設定（受講者ごと・各自 1 回）
 
-> **この 0 節はテナント管理者が代表で 1 回だけ実行する。** 作成物（`contoso-obo-chat-ui` クライアント アプリ、Blueprint の OAuth API 化、Agent Identity への Graph 委任）はいずれもテナントに 1 個の共有リソースで、冪等（既存があれば再利用）。受講者が各自で繰り返す必要はない。**受講者は 1 節（`.env` 生成）以降から始める。**
+> **この 0 節は受講者が各自 1 回ずつ実行する。** lab2-3 の `a365 setup all --agent-name custom-maf-agent-a365-userNN` で **Blueprint も Agent Identity も受講者ごとに別物**として発行されるため、それらを操作する `02`（Blueprint の OAuth API 化）と `03`（Agent Identity への Graph 委任）は**自分の Blueprint / Agent Identity に対して**実行する必要がある。`01`（OBO クライアント アプリ）も、その `requiredResourceAccess` は**特定 Blueprint の `access_as_user`** を指すため受講者ごとに必要で、**クライアント アプリ名を `-userNN` で分けて衝突を避ける**。
 
-> `Blueprint` / `Agent Identity` の appId は lab2 の `a365.generated.config.json` から **自動解決**される（`-BlueprintAppId` 等は通常不要）。ただし `02` の **`-ClientAppId` だけは自動解決できない**ため、`01` の出力 appId を手で渡す。テナント管理者権限が必要。
+> `Blueprint` / `Agent Identity` の appId は lab2 の `a365.generated.config.json`（**自分が `a365 setup all` を実行して生成したもの**）から **自動解決**される（`-BlueprintAppId` 等は通常不要）。ただし `02` の **`-ClientAppId` だけは自動解決できない**ため、`01` の出力 appId を手で渡す。各操作には**自分の Blueprint / Agent Identity に対する管理者同意**が必要（同意 URL を Global Administrator に共有する運用は lab2-3 と同じ）。
 
 ```powershell
 cd C:\GitHub\Agent365-Onboarding\Handson\lab5\agent-custom-MAF-ACA-A365-obo\scripts
+$me = "userNN"   # 自分の番号に置き換える（例 user01）
 
-# 1) OBO チャット UI 用の Public Client アプリを登録（contoso-obo-chat-ui）
-pwsh .\01_register-obo-client-app.ps1
+# 1) OBO チャット UI 用の Public Client アプリを登録（contoso-obo-chat-ui-userNN）
+pwsh .\01_register-obo-client-app.ps1 -DisplayName "contoso-obo-chat-ui-$me"
 #   → 出力の "Client App ID : <GUID>" を控える（02 / chat-ui-obo / test-obo-end-to-end で使う）
 
 # 2) Blueprint アプリを OAuth API 化（api://{blueprint} / scope=access_as_user / preAuthorize）
@@ -135,17 +136,19 @@ pwsh .\02_patch-blueprint-as-oauth-api.ps1 -ClientAppId <01で控えたGUID>
 
 # 3) 02 で access_as_user スコープが確定したので 01 を再実行し、
 #    クライアント側の requiredResourceAccess（access_as_user 要求）を配線する
-pwsh .\01_register-obo-client-app.ps1
+pwsh .\01_register-obo-client-app.ps1 -DisplayName "contoso-obo-chat-ui-$me"
 
 # 4) Agent Identity SP に Microsoft Graph 委任権限（User.Read / User.ReadBasic.All）を付与
 pwsh .\03_grant-agentid-graph-delegated.ps1
 ```
 
-> **実行順の注意（重要）**: `02` は `preAuthorizedApplications` にクライアント アプリを登録するため、**先に `01` でクライアント アプリ（`contoso-obo-chat-ui`）を作成して appId を得てから `02` に `-ClientAppId` で渡す**。一方で `01` の `requiredResourceAccess`（Blueprint の `access_as_user` 要求）は `02` がスコープを作って初めて確定するため、**`01` → `02` → `01`（再実行）** の順で流すと両方が配線される。控えた Client App ID は `chat-ui-obo/.env` の `AAD_CLIENT_ID` と `test-obo-end-to-end.ps1` でも使う。
+> **実行順の注意（重要）**: `02` は `preAuthorizedApplications` にクライアント アプリを登録するため、**先に `01` でクライアント アプリ（`contoso-obo-chat-ui-userNN`）を作成して appId を得てから `02` に `-ClientAppId` で渡す**。一方で `01` の `requiredResourceAccess`（Blueprint の `access_as_user` 要求）は `02` がスコープを作って初めて確定するため、**`01` → `02` → `01`（再実行）** の順で流すと両方が配線される。`01` 再実行時も**同じ `-DisplayName contoso-obo-chat-ui-userNN`** を指定して同一アプリを更新すること（名前が変わると別アプリが作られる）。控えた Client App ID は `chat-ui-obo/.env` の `AAD_CLIENT_ID` と `test-obo-end-to-end.ps1` でも使う。
+
+> **`.env` 生成（1 節）でも同じ `-DisplayName` を渡す**: `04_generate-chat-ui-env.ps1` はクライアント アプリを displayName で検索するため、`-DisplayName "contoso-obo-chat-ui-$me"` を付けて自分のアプリを解決させる（既定の `contoso-obo-chat-ui` のままだと他人のアプリや未存在で外す）。
 
 | スクリプト | 役割 | 自動解決 |
 |---|---|---|
-| `01_register-obo-client-app.ps1` | OBO 用 Public Client（`contoso-obo-chat-ui`, redirect=`http://localhost`/`:8501`）を登録し `access_as_user` を要求 | `agentBlueprintId` を lab2 から |
+| `01_register-obo-client-app.ps1` | OBO 用 Public Client（`contoso-obo-chat-ui-userNN`, redirect=`http://localhost`/`:8501`）を登録し `access_as_user` を要求 | `agentBlueprintId` を lab2 から／**`-DisplayName` に `-userNN` を付ける（衝突回避）** |
 | `02_patch-blueprint-as-oauth-api.ps1` | Blueprint を OAuth API 化（`identifierUris=[api://{blueprint}]`, `oauth2PermissionScopes=access_as_user`, `preAuthorizedApplications`, `requestedAccessTokenVersion=2`） | `agentBlueprintId` を lab2 から／**`-ClientAppId` は必須（01 の出力を手で渡す）** |
 | `03_grant-agentid-graph-delegated.ps1` | Agent Identity SP に Graph 委任 `User.Read` / `User.ReadBasic.All` を付与（`oauth2PermissionGrants`） | `agenticAppId` を lab2 から |
 
@@ -214,9 +217,10 @@ python smoke_test.py https://<your-app-fqdn>
 # 1) .env を自動生成（scripts フォルダーで実行）
 #    AAD_CLIENT_ID / BLUEPRINT_APP_ID / AGENT_BASE_URL / AZURE_TENANT_ID を自動解決して書き出す
 cd Handson\lab5\agent-custom-MAF-ACA-A365-obo\scripts
-pwsh .\04_generate-chat-ui-env.ps1
+$me = "userNN"   # 0 節で使ったのと同じ番号（例 user01）
+pwsh .\04_generate-chat-ui-env.ps1 -DisplayName "contoso-obo-chat-ui-$me"
 #   AGENT_BASE_URL を明示したい場合（ACA が複数 / 未検出のとき）:
-#   pwsh .\04_generate-chat-ui-env.ps1 -AgentBaseUrl https://custom-maf-a365-obo-userNN.<region>.azurecontainerapps.io
+#   pwsh .\04_generate-chat-ui-env.ps1 -DisplayName "contoso-obo-chat-ui-$me" -AgentBaseUrl https://custom-maf-a365-obo-userNN.<region>.azurecontainerapps.io
 
 # 2) chat-ui-obo を起動
 cd ..\..\chat-ui-obo   # Handson\lab5\chat-ui-obo
@@ -224,8 +228,6 @@ python -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 streamlit run app.py
 ```
-
-> `04_generate-chat-ui-env.ps1` は `01` が作成した Public Client（`contoso-obo-chat-ui`）、`lab2\a365.generated.config.json` の Blueprint appId、`custom-maf-a365-obo*` の ACA URL を自動解決して `chat-ui-obo\.env` を生成する（既存 `.env` は `.env.bak` に退避）。手動の `Copy-Item .env.example .env` と編集は不要。
 
 ブラウザで「サインイン」→ device code でサインイン → 「あなたから見た私のプロフィールを Graph で教えてください。」を送信。エージェントが OBO（Step 2b）で **あなた本人の** Graph プロフィールを返す（`mode=obo`, `user=<あなたの upn>`）。
 
