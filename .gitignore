@@ -21,3 +21,8 @@ a365.generated.config.backup-*.json
 
 # generated ACA manifests (contain client secrets)
 **/*.generated.yaml
+
+# local env files (contain tenant / app ids); keep .env.example tracked
+.env
+**/.env
+!**/.env.example
