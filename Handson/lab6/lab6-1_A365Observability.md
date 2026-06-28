@@ -135,7 +135,7 @@ pwsh .\deploy-aca.ps1
 >
 > ⚠️ ここに **Blueprint appId** を入れると **403 Agent ID mismatch**。必ず**インスタンス（Agent Identity）の appId**（`.env` の `AGENT_IDENTITY_APP_ID` と同値）を使う。
 
-その後、[local-chat-app](../lab0/local-chat-app/) 等で **1〜2 往復**会話し、`invoke_agent`（ルート）/ `chat` / `execute_tool` のスパン ツリーを発生させる。
+その後、[chat-ui-obo](../lab5/chat-ui-obo/)（lab5 と同じ OBO 用 UI）で **1〜2 往復**会話し、`invoke_agent`（ルート）/ `chat` / `execute_tool` のスパン ツリーを発生させる。lab6 は OBO 版なので会話の入口は `/obo-chat`（`Authorization: Bearer <user_token>` 必須）。`local-chat-app` はユーザートークンを載せないため OBO の往復にはならない。
 
 ---
 
