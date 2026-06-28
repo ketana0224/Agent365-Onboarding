@@ -211,16 +211,21 @@ python smoke_test.py https://<your-app-fqdn>
 #### 方法 A: Streamlit UI（chat-ui-obo）
 
 ```powershell
+# 1) .env を自動生成（scripts フォルダーで実行）
+#    AAD_CLIENT_ID / BLUEPRINT_APP_ID / AGENT_BASE_URL / AZURE_TENANT_ID を自動解決して書き出す
+cd Handson\lab5\agent-custom-MAF-ACA-A365-obo\scripts
+pwsh .\04_generate-chat-ui-env.ps1
+#   AGENT_BASE_URL を明示したい場合（ACA が複数 / 未検出のとき）:
+#   pwsh .\04_generate-chat-ui-env.ps1 -AgentBaseUrl https://custom-maf-a365-obo-userNN.<region>.azurecontainerapps.io
+
+# 2) chat-ui-obo を起動
 cd ..\..\chat-ui-obo   # Handson\lab5\chat-ui-obo
 python -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-Copy-Item .env.example .env
-# .env を編集:
-#   AAD_CLIENT_ID   = scripts/01 で作った Public Client appId
-#   BLUEPRINT_APP_ID= lab2 の Blueprint appId
-#   AGENT_BASE_URL  = https://custom-maf-a365-obo-userNN....azurecontainerapps.io
 streamlit run app.py
 ```
+
+> `04_generate-chat-ui-env.ps1` は `01` が作成した Public Client（`contoso-obo-chat-ui`）、`lab2\a365.generated.config.json` の Blueprint appId、`custom-maf-a365-obo*` の ACA URL を自動解決して `chat-ui-obo\.env` を生成する（既存 `.env` は `.env.bak` に退避）。手動の `Copy-Item .env.example .env` と編集は不要。
 
 ブラウザで「サインイン」→ device code でサインイン → 「あなたから見た私のプロフィールを Graph で教えてください。」を送信。エージェントが OBO（Step 2b）で **あなた本人の** Graph プロフィールを返す（`mode=obo`, `user=<あなたの upn>`）。
 
