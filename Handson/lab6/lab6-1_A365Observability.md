@@ -109,15 +109,23 @@ get_tracer_provider().add_span_processor(
 
 ### デプロイ（Lab5 稼働アプリへの差分更新）
 
-lab6 は **lab5 の変化点**なので、フルデプロイ（`prepare-env.ps1` → `.env`）はやり直さない。**`prepare-env.ps1` も不要**で、lab5 で生成済みの `.env`（APIM / MCP / OBO / Agent ID / 受講者ごとの ACA 命名など）をそのまま流用する。
-
-このフォルダの `deploy-aca.ps1` を**再実行するだけ**でよい。スクリプトが `.env` を読んで、(a) 計装入りの新イメージを `az acr build` で焼き直し、(b) 受講者ごとの `rg-<userNN>` / `custom-maf-a365-obo-<userNN>` / ACR を解決し、(c) 既に在るアプリなら `az containerapp update --image …` で差し替える。
+lab6 は **lab5 の変化点**なので、Agent ID 等の発行（`scripts\01〜03`）はやり直さない。ただし **obs フォルダ（`agent-custom-MAF-ACA-A365-obo-obs`）は lab5 とは別フォルダ**で、ここの `.env` は `.gitignore` 済み。新規 clone では存在しないので、**このフォルダ用の `.env` を先に用意する**。lab5 と同じ接続情報・Agent ID・受講者ごとの ACA 命名を共有するので、lab5 の `.env` をコピーするのが最速。
 
 ```powershell
 # このフォルダ（agent-custom-MAF-ACA-A365-obo-obs）で実行。
-# lab5 の .env を流用し、計装入りイメージを再ビルドして稼働アプリへ差し替える。
+# (1) lab5 の .env をコピー（lab5 を同マシンで実施済みなら最速）
+Copy-Item ..\..\lab5\agent-custom-MAF-ACA-A365-obo\.env .env
+
+#   別マシン / lab5 未実施なら、このフォルダの prepare-env.ps1 で生成:
+#   pwsh .\prepare-env.ps1 -Me userNN   # 例: user01。lab2 config + 同一 Windows ユーザーが必要
+
+# (2) 計装入りイメージを再ビルドして稼働アプリへ差し替える
 pwsh .\deploy-aca.ps1
 ```
+
+`deploy-aca.ps1` は `.env` を読んで、(a) 計装入りの新イメージを `az acr build` で焼き直し、(b) 受講者ごとの `rg-<userNN>` / `custom-maf-a365-obo-<userNN>` / ACR を解決し、(c) 既に在るアプリなら `az containerapp update --image …` で差し替える。
+
+> `prepare-env.ps1`（B）は Blueprint シークレットを **DPAPI(CurrentUser)** で復号するため、lab2 で `a365 setup all` を実行したのと同じ Windows ユーザーでのみ成功する。別マシン/別ユーザーでは A（lab5 の `.env` をコピー）を使う。
 
 > **スパン用 ID の env は追加不要**。`config.observability_agent_id()` / `observability_tenant_id()` は `AGENT365OBSERVABILITY__AGENTID` / `__TENANTID` が無ければ、`deploy-aca.ps1` が既に投入する **`AGENT_IDENTITY_APP_ID`（インスタンス appId）/ `AZURE_TENANT_ID`** にフォールバックする。別テナント/別 ID をスパンに刻みたい場合だけ、明示の上書きとして次を足す:
 >
