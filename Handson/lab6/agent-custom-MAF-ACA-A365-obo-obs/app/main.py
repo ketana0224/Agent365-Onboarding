@@ -137,6 +137,10 @@ def _configure_observability() -> None:  # Lab6 observability
       set_tracer_provider が衝突し、後から呼ぶ Distro の A365 プロセッサが無効化される）。
     """
     # --- Lab6 observability: ここから ---
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger("azure.monitor.opentelemetry.exporter").setLevel(logging.WARNING)
+
     from microsoft.opentelemetry import use_microsoft_opentelemetry
 
     # 正しい Distro API: enable_a365 + a365_enable_observability_exporter + a365_token_resolver。
@@ -187,12 +191,15 @@ def _configure_observability() -> None:  # Lab6 observability
 
     # agent-framework のインスツルメンテーション（InvokeAgent 等のスパン生成）を有効化。
     # Distro が確立済みの TracerProvider をそのまま使う（set_tracer_provider は no-op）。
+    # ★ enable_otel=True を明示しないと既定で no-op となり、MAF スパンが1本も
+    #   生成されず A365 export も発火しない（CloudAppEvents が空になる真因）。
     try:
         from agent_framework.observability import setup_observability
 
-        setup_observability()
-    except Exception:  # noqa: BLE001
-        pass
+        setup_observability(enable_otel=True)
+        print("[ok] agent-framework インスツルメンテーションを有効化（enable_otel=True）。")
+    except Exception as ex:  # noqa: BLE001
+        print(f"[warn] agent-framework インスツルメンテーション有効化に失敗: {ex}")
 
 
 def _build_token_provider() -> Optional[AgentIdTokenProvider]:
