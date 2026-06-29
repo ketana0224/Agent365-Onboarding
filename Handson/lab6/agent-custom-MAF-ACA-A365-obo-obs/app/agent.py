@@ -367,6 +367,7 @@ async def build_agent(stack: AsyncExitStack):
 
     agent = Agent(
         client,
+        id=config.observability_agent_id(),  # ★ MAF 自動採番ではなく登録済み Agent Identity を gen_ai.agent.id に固定（exporter のチャンク単位＝OtelWrite 付与先と一致）
         name=AGENT_NAME,
         instructions=INSTRUCTIONS,
         tools=tools or None,
