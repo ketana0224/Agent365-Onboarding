@@ -176,14 +176,14 @@ Write-Host "== az 拡張 ==";     az extension list --query "[].name" -o tsv
 
 ```powershell
 # Azure CLI（リソース操作）
-az login --tenant 655bd66a-5001-4cb3-9aad-ce54a27d5d95
+az login --tenant <TENANT_ID>
 az account show --output table
 
 # Azure Developer CLI（Lab7 で使用）
-azd auth login --tenant-id 655bd66a-5001-4cb3-9aad-ce54a27d5d95
+azd auth login --tenant-id <TENANT_ID>
 ```
 
-> 受講者は配布された `userNN@M365CPI65139919.onmicrosoft.com` でサインインする（初回はパスワード変更を求められる）。
+> 受講者は配布された `userNN@<TENANT_DOMAIN>` でサインインする（初回はパスワード変更を求められる）。
 
 ---
 

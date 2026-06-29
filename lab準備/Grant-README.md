@@ -93,7 +93,7 @@ Read directory data）はスクリプトの `-Scopes` に対応。**「承諾」
 
 | パラメーター | 既定値 | 用途 |
 |--------------|--------|------|
-| `-TenantId` | `655bd66a-…` | 対象テナント |
+| `-TenantId` | `<TENANT_ID>` | 対象テナント |
 | `-BlueprintNameLike` | `custom-maf-agent-a365-*Blueprint` | 対象 Blueprint の displayName パターン |
 | `-WhatIfOnly` | （なし） | 対象一覧のみ表示し付与しない |
 

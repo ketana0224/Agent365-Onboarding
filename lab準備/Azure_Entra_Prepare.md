@@ -1,15 +1,15 @@
 # C:\GitHub\Agent365-Onboarding\_report\Handsonを実習する環境を作る
 
 # 対象の環境情報
-- **対象テナント**: `655bd66a-5001-4cb3-9aad-ce54a27d5d95`
-- **対象サブスクリプション**: `ME-M365CPI65139919-ketana-1` 
+- **対象テナント**: `<TENANT_ID>`
+- **対象サブスクリプション**: `<SUBSCRIPTION_NAME>` 
 
 # 1.受講者ユーザを作る
 - user01～user12 の12ユーザー
 
 ```powershell
 # === 共通設定 ===
-$tenantId = "655bd66a-5001-4cb3-9aad-ce54a27d5d95"
+$tenantId = "<TENANT_ID>"
 
 # このテナントの初期ドメイン (xxxx.onmicrosoft.com) を自動取得
 $domain = az rest --method get `
@@ -50,8 +50,8 @@ Write-Host "初期パスワード: $initialPassword  (12ユーザー共通・控
 
 ```powershell
 # === 共通設定 ===
-$subscription = "ME-M365CPI65139919-ketana-1"
-$location     = "japaneast"
+$subscription = "<SUBSCRIPTION_NAME>"
+$location     = "eastus2"
 
 az account set --subscription $subscription
 
@@ -76,7 +76,7 @@ az account set --subscription $subscription
 
 ```powershell
 # === 共通設定 ===
-$subscription = "ME-M365CPI65139919-ketana-1"
+$subscription = "<SUBSCRIPTION_NAME>"
 $subId  = az account show --subscription $subscription --query id -o tsv
 $domain = az rest --method get `
   --uri "https://graph.microsoft.com/v1.0/domains?`$select=id,isInitial" `
@@ -117,7 +117,7 @@ $role = "Owner"
 
 ```powershell
 # === 共通設定 ===
-$tenantId = "655bd66a-5001-4cb3-9aad-ce54a27d5d95"
+$tenantId = "<TENANT_ID>"
 
 # Graph トークン取得 (az rest は $ を含む Graph URI で壊れるため Invoke-RestMethod を使用)
 $token = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv
@@ -193,7 +193,7 @@ $assignedPrincipals = $existing.principalId
 
 ```powershell
 # === 共通設定 ===
-$tenantId = "655bd66a-5001-4cb3-9aad-ce54a27d5d95"
+$tenantId = "<TENANT_ID>"
 
 # Graph トークン取得 (az rest は $ を含む Graph URI で壊れるため Invoke-RestMethod を使用)
 $token = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv

@@ -21,7 +21,7 @@
 #>
 
 param(
-  [string]$TenantId = '655bd66a-5001-4cb3-9aad-ce54a27d5d95',
+  [string]$TenantId = '<TENANT_ID>',
   # 対象 Blueprint を絞り込む displayName パターン（既定は本ラボの命名規約）
   [string]$BlueprintNameLike = 'custom-maf-agent-a365-*Blueprint',
   # 付与せず対象と操作内容のみ表示する
