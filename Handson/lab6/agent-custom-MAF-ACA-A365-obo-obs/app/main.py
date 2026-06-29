@@ -67,8 +67,8 @@ def _build_a365_token_resolver():  # Lab6 observability
 
     try:
         tenant = config.tenant_id()
-        blueprint = config.blueprint_app_id()
-        secret = config.blueprint_client_secret()
+        blueprint = config.observability_blueprint_app_id()
+        secret = config.observability_blueprint_client_secret()
         instance = config.observability_agent_id()  # インスタンス（Agent Identity）の appId
     except Exception as ex:  # noqa: BLE001
         print(f"[warn] A365 トークン構成が不足のため export はスキップ: {ex}")
@@ -149,6 +149,7 @@ def _configure_observability() -> None:  # Lab6 observability
     kwargs: dict = {
         "enable_a365": True,                          # A365 trace export を有効化
         "a365_enable_observability_exporter": True,   # A365 HTTP observability exporter を有効化
+        "a365_use_s2s_endpoint": True,                # S2S: /observabilityService エンドポイントへ送る（自律=app-only トークンの正道）
         "a365_token_resolver": _build_a365_token_resolver(),  # lab の fmi_path（Agent Identity）
     }
     conn = config.appinsights_connection_string()
@@ -191,13 +192,12 @@ def _configure_observability() -> None:  # Lab6 observability
 
     # agent-framework のインスツルメンテーション（InvokeAgent 等のスパン生成）を有効化。
     # Distro が確立済みの TracerProvider をそのまま使う（set_tracer_provider は no-op）。
-    # ★ enable_otel=True を明示しないと既定で no-op となり、MAF スパンが1本も
-    #   生成されず A365 export も発火しない（CloudAppEvents が空になる真因）。
+    # ★ 既定で有効だが、env/disable の状態に依らず確実に有効化するため明示呼び出し。
     try:
-        from agent_framework.observability import setup_observability
+        from agent_framework.observability import enable_instrumentation
 
-        setup_observability(enable_otel=True)
-        print("[ok] agent-framework インスツルメンテーションを有効化（enable_otel=True）。")
+        enable_instrumentation(force=True)
+        print("[ok] agent-framework インスツルメンテーションを有効化（force=True）。")
     except Exception as ex:  # noqa: BLE001
         print(f"[warn] agent-framework インスツルメンテーション有効化に失敗: {ex}")
 

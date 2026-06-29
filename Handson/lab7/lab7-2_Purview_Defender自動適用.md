@@ -34,6 +34,8 @@ Teams 往復で、このエージェントは **Microsoft 365 を経由した実
 2. **プレビュー機能をオプトイン**: [System > Settings > Microsoft Defender XDR > Preview features](https://security.microsoft.com/securitysettings/defender/preview_features) をオンにする。
 3. **AI エージェント セキュリティを有効化**: **System（システム）> Settings（設定）> Security for AI（AI 向けセキュリティ）**（直接 URL: `https://security.microsoft.com/securitysettings/security_for_ai`）を開き、**AI エージェントのセキュリティ**をオンにする。
    - **AI リアルタイム保護 & 調査** の下で **Agent 365 が「接続済み」** になっていることを確認（初期接続の反映に最大 ~30 分）。
+4. **Microsoft 365 アプリ コネクタを有効化（CloudAppEvents 出現の必須前提）**: `CloudAppEvents` は **Defender for Cloud Apps** のテーブルなので、上記 1-3 だけではスキーマに現れず `KS204`（テーブル不明）になる。[Connected apps](https://security.microsoft.com/cloudapps/connected-apps) > **App connectors** で **Office 365** を **Connect** する（Agent 365 監視データの収集経路）。反映に最大 ~30 分で `CloudAppEvents` がスキーマに出現する。
+   - 出典: [ほぼリアルタイム検出＆高度なハンティングの有効化](https://learn.microsoft.com/defender-xdr/security-for-ai/ai-agent-detection-protection#enable-near-real-time-detection-and-advanced-threat-hunting) → 「Microsoft 365 アプリ コネクタを有効にして Agent 365 監視データを収集」。
 
 ### 2.2 高度な追求（Advanced hunting）で確認 ← 左ナビの **「高度な追求」**
 

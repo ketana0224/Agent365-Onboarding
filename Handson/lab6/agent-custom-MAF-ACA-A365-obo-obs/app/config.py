@@ -168,3 +168,14 @@ def observability_tenant_id() -> str:  # Lab6 observability
     """A365 Observability の顧客テナント GUID。
     CLI が AGENT365OBSERVABILITY__TENANTID にスタンプする。未設定時は AZURE_TENANT_ID。"""
     return os.environ.get("AGENT365OBSERVABILITY__TENANTID") or tenant_id()
+
+
+def observability_blueprint_app_id() -> str:  # Lab6 observability
+    """観測性エージェント（observability_agent_id）の親 Blueprint appId。
+    egress の Blueprint と異なる場合があるため別 env で分離。未設定時は egress と同じ。"""
+    return os.environ.get("AGENT365OBSERVABILITY__BLUEPRINTID") or blueprint_app_id()
+
+
+def observability_blueprint_client_secret() -> str:  # Lab6 observability
+    """観測性 Blueprint のクライアント シークレット。未設定時は egress と同じ。"""
+    return os.environ.get("AGENT365OBSERVABILITY__BLUEPRINTSECRET") or blueprint_client_secret()
