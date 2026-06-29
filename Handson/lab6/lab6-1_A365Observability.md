@@ -2,6 +2,7 @@
 
 > 親: [Handson README](../README.md) ／ 前: [lab5-1｜OBO ユーザー委任と Agent ID 二重統制](../lab5/lab5-1_OBOユーザー委任とAgentID二重統制.md) ／ 次: [lab7｜Teams から呼べるようにする](../lab7/Lab1-3_m365.md)
 > 一次情報まとめ: [Observability_DirectOTel_と格納先.md](../Observability_DirectOTel_と格納先.md)
+> 前提: [lab6-0｜Defender 受け皿の有効化](./lab6-0_前提Defender有効化.md)
 
 ## このステップの狙い
 
@@ -153,13 +154,13 @@ pwsh .\deploy-aca.ps1
 
 ## 4. 検証｜計装したトレースをどこで見るか
 
-lab6 の成果物は **A365 Observability バックエンドに受理されるスパン**。**真の合否は Defender Advanced Hunting の `CloudAppEvents` に行が出ること**（一次情報のデータフロー図の唯一の格納先）。サイレント ドロップは2つだけ＝①operation名が不正、②ライセンス未割当。両方クリアなら **CloudAppEvents はライセンス割当だけで到達する（MDA 完全オンボードは不要）**。`KS204 does not refer to any known table` は「テーブル不在」＝①lab7-2 §2.1 の Office 365 アプリ コネクタ未接続・反映待ち（最大 ~30 分）か、②まだ1スパンも受理されていない（export が 403/operation名拒否/未送出）。
+lab6 の成果物は **A365 Observability バックエンドに受理されるスパン**。**実質合格は §4.1 の export 200/sent**（自作コードから A365 へ受理された証拠）。`CloudAppEvents`（§4.2）は Defender 側の最終格納先だが、**テナント依存の2条件（(a) MDA O365 コネクタが `CloudAppEvents` テーブルを生成済み、(b) スパンの agent_id がレジストリ登録済みのマネージドエージェントと一致）が揃うときのみ到達**する。どちらかが欠けると export 200 でも行は出ない。`KS204 / Failed to resolve table 'CloudAppEvents'` はテーブル未生成＝O365 コネクタ反映待ちまたはサブスクリプション/ライセンス未充足。
 
-判定は2段階: **§4.1 でログ上の export 200＋partialSuccess を切り分け（即時）→ §4.2 で CloudAppEvents 着弾を確認（〜5分・本合否）**。Azure Monitor（§4.3）は任意の運用宛先。
+判定は2段階: **§4.1 で export 200＋partialSuccess を切り分け（即時・実質合格）→ §4.2 で CloudAppEvents 着弾（テナントで CloudAppEvents テーブルが生成されている場合のみ）**。Azure Monitor（§4.3）は任意の運用宛先。
 
 ### 4.1 一次検証｜export が 200 かつ partialSuccess null か（切り分け・即時）
 
-初期化ログ（`[ok] … 初期化しました`）は exporter 起動の証明だけ。**200 OK も受理の証明にならない**（未割当ライセンスは `200 {partialSuccess: null}` で黙殺、operation名不正は `200` で `partialSuccess.rejectedSpans>0`）。export の HTTP ステータスは既定（INFO）では出ないため、**検証時だけ一時的に** `microsoft.opentelemetry` を DEBUG に上げて 200／4xx／skip を切り分ける（運用では戻す）。
+初期化ログ（`[ok] … 初期化しました`）は exporter 起動の証明だけ。**200 OK も受理の証明にならない**（未割当ライセンスは `200 {partialSuccess: null}` で黙殺、operation名不正は `200` で `partialSuccess.rejectedSpans>0`）。export の HTTP ステータスは既定（INFO）では出ないため、**検証時だけ一時的に** ACA 環境変数 `A365_OTEL_DEBUG=1` を設定して `microsoft.opentelemetry` を DEBUG に上げ 200／4xx／skip を切り分ける（運用では未設定＝INFO に戻す）。
 
 **手順**: ① 一度チャットで往復させてスパンを生成 → ② `ContainerAppConsoleLogs_CL` で export 行を見る。
 
@@ -202,22 +203,23 @@ ContainerAppConsoleLogs_CL
 
 ### 4.2 本合否｜Defender CloudAppEvents 着弾（〜5分・ライセンス割当だけで到達）
 
-> 前提＝**lab7-2 §2.1**：Defender XDR プレビュー＋AI エージェント セキュリティ ON に加え、**ステップ4 の Office 365 アプリ コネクタ接続が必須**（`CloudAppEvents` は Defender for Cloud Apps のテーブルで、コネクタ未接続だとスキーマに現れず `KS204`／反映に最大 ~30 分）。**MDA 完全オンボードは不要**。受理されたスパンはこの1テーブルが格納先。export 200 の数分後に行が出れば lab6 合格。`KS204` が続く場合は ①コネクタ未接続・反映待ち、または ②export 未受理（§4.1 へ戻り 403/operation名/skip を直す）。
+> 前提＝**[lab6-0｜Defender 受け皿の有効化](./lab6-0_前提Defender有効化.md)**（プレビュー＋AI エージェント セキュリティ＋O365 コネクタ接続）を先に完了していること。さらに **`CloudAppEvents` はテナントに MDA O365 コネクタが生成した場合のみ**出現し、`Failed to resolve table 'CloudAppEvents'`（KS204）なら未生成＝コネクタ反映待ち/ライセンス未充足。その場合は **§4.1 export 200/sent を lab6 合格扱い**とし、§4.2 はテーブル生成後に確認する。
 
 ```kusto
 CloudAppEvents
 | where Timestamp > ago(30m)
-| where AccountObjectId == "<Agent Identity appId>"
+| where AccountObjectId == "<登録済みマネージド Agent の appId>"   // AgentsInfo に出る ID。obs 専用ペアの appId だと未登録で attribution されず 0 行
 | project Timestamp, ActionType, RawEventData
 ```
 
-`ActionType`＝`InvokeAgent`/`InferenceCall`/`ExecuteTool*`。**全 operation を受理**するので `chat`/`execute_tool` だけでも出る。ただし Defender 活動ビュー・管理センター インベントリ・Purview の3面はルートの `invoke_agent` 必須。インベントリ補助:
+`ActionType`＝`InvokeAgent`/`InferenceCall`/`ExecuteTool*`。**全 operation を受理**するので `chat`/`execute_tool` だけでも出る。ただし Defender 活動ビュー・管理センター インベントリ・Purview の3面はルートの `invoke_agent` 必須。インベントリ補助（テーブル名はテナントにより `AgentsInfo`、新名 `AIAgentsInfo`）:
 
 ```kusto
 AgentsInfo
-| where AgentId == "<Agent Identity appId>"
+| where AgentId == "<登録済みマネージド Agent の appId>"
 | project Timestamp, Name, AgentId, Platform, Description
 ```
+> ⚠️ スパンの agent_id は **`AgentsInfo` に登録済みの ID** を使うこと。obs 専用 Blueprint ペアの appId だと未登録で CloudAppEvents に attribution されず 0 行になる。
 
 [admin.microsoft.com](https://admin.microsoft.com) → Agents インベントリにも `invoke_agent` 行で反映。詳細は [lab7-2](../lab7/lab7-2_Purview_Defender自動適用.md)。
 

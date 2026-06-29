@@ -138,11 +138,14 @@ def _configure_observability() -> None:  # Lab6 observability
     """
     # --- Lab6 observability: ここから ---
     import logging
+    import os
     logging.basicConfig(level=logging.INFO)
     logging.getLogger("azure.monitor.opentelemetry.exporter").setLevel(logging.WARNING)
-    # 検証用: export の HTTP ステータス（200/partialSuccess/rejectedSpans）を可視化。運用では削除。
-    logging.getLogger("microsoft.opentelemetry").setLevel(logging.DEBUG)
-    print("[ok] A365 DEBUG ログ有効")
+    # 検証用: export の HTTP ステータス（200/partialSuccess/rejectedSpans）を可視化。
+    # §4.1 の切り分け時のみ A365_OTEL_DEBUG=1 を設定して有効化（運用既定は INFO）。
+    if os.getenv("A365_OTEL_DEBUG") == "1":
+        logging.getLogger("microsoft.opentelemetry").setLevel(logging.DEBUG)
+        print("[ok] A365 DEBUG ログ有効")
 
     from microsoft.opentelemetry import use_microsoft_opentelemetry
 
