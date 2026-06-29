@@ -50,11 +50,19 @@ flowchart LR
 
 ## 2. このエージェントは「自社コード（種別 A）」
 
-| 種別 | 実装 |
-|---|---|
-| **A. 自社コード**（MAF 等）← 本ラボ | **in-process で Microsoft OpenTelemetry Distro を初期化**（正道） |
-| B. Microsoft ランタイム（Copilot Studio / Foundry） | ランタイムが計装済み・**コード不要** |
-| C. コード不可の SaaS | Direct OTel（§5 参照、本ラボでは使わない） |
+> 自由度は A 系（自社コード）＞ B（マネージド）＞ C（SaaS）。本ラボは最も手配線が多い「A 自前」でも CloudAppEvents に着弾できることを実証する。
+
+| 種別 | ランタイム | 計装 | A365認証/baggage | 例 |
+|---|---|---|---|---|
+| **A 自前** ← 本ラボ | ランタイム無し(手配線) | 手動(Distro) | **手動(②③)** | 本ラボ MAF+FastAPI |
+| A+SDK | Agent 365 SDK ホスト | 手動(Distro) | 自動(SDKランタイム) | lab8 sidecar / extLab2 フル機能 |
+| B | Microsoft マネージド | 自動 | 自動 | Copilot Studio / Foundry Hosted |
+| C | コード不可の SaaS | Direct OTel | Direct OTel | §5 参照（本ラボでは使わない） |
+
+- **計装**: OTel スパン生成。B のみ自動、A 系は Distro を自分で初期化。
+- **A365認証/baggage**: OtelWrite トークン取得＋`gen_ai.agent.id`/`microsoft.tenant.id` スタンプ。SDK ホストが居れば自動、自前ホストは token resolver(②)＋A365SpanProcessor(③)を手配線。
+- **Agent 365 SDK ホスト**: 自社コード（種別 A）を Agent 365 SDK のホスティング ランタイム上で動かす形。FIC 用 env 注入・OtelWrite トークン取得・テナント/AgentID baggage スタンプをランタイムが肩代わりする。
+  - ただしこのランタイムに乗せるには既存コードの改修が要る（FastAPI 直叩きをやめ SDK のホスト/サイドカーにエントリポイントを委譲、`requirements.txt` に SDK・観測性パッケージ追加、`a365.config.json` 設定）。手間と引き換えに②③が消える、というトレードオフ。
 
 ---
 
@@ -62,7 +70,7 @@ flowchart LR
 
 > 実装フォルダ: [agent-custom-MAF-ACA-A365-obo-obs](./agent-custom-MAF-ACA-A365-obo-obs/)（Lab5 OBO のコピー）。差分は `# lab6 A365 Observability` コメントで追える。
 
-Lab5 のエージェントは **MAF + 自前 FastAPI ホスト**で動いている。ここに Distro の A365 向け計装を足すための変化点は **4 つ**。**Agent 365 のホスティング SDK を使わない**（自前ホスト）ぶん、本来ランタイムが自動でやる 2・3 を手配線し、4 で着弾を可視化する。
+Lab5 のエージェントは **MAF + 自前 FastAPI ホスト**で動いている。ここに Distro の A365 向け計装を足すための変化点は **4 つ**。**Agent 365 SDK のホスティング ランタイムを使わない**（自前ホスト）ぶん、本来ランタイムが自動でやる 2・3 を手配線し、4 で着弾を可視化する。
 
 ### 変化点① Distro を A365 有効で初期化する
 
@@ -82,7 +90,7 @@ use_microsoft_opentelemetry(
 
 ### 変化点② トークン resolver を渡す
 
-ホスティング SDK が無いので FIC 用の env が注入されず、既定の `DefaultAzureCredential`（＝ACA マネージド ID）になり **403**。そこで出口化（Step 2a）と同じ **fmi_path（Blueprint + `fmi_path=AgentIdentity` → `client_credentials`）** を msal で同期実行する `_build_a365_token_resolver()` を `main.py` に実装し、観測リソース `api://9b975845-…/.default`（`Agent365.Observability.OtelWrite` ロール）のトークンを返す。
+ホスティング ランタイムが無いので FIC 用の env が注入されず、既定の `DefaultAzureCredential`（＝ACA マネージド ID）になり **403**。そこで出口化（Step 2a）と同じ **fmi_path（Blueprint + `fmi_path=AgentIdentity` → `client_credentials`）** を msal で同期実行する `_build_a365_token_resolver()` を `main.py` に実装し、観測リソース `api://9b975845-…/.default`（`Agent365.Observability.OtelWrite` ロール）のトークンを返す。
 
 ```python
 # 同期 callable (agent_id, tenant_id) -> str | None
@@ -91,7 +99,7 @@ a365_token_resolver=_build_a365_token_resolver()
 
 ### 変化点③ tenant_id / agent_id を静的スタンプ
 
-ホスティング SDK の BaggageMiddleware が無いので、スパンに `gen_ai.agent.id` / `microsoft.tenant.id` が付かず exporter が **skip** する。`A365SpanProcessor` で両 ID を全スパンに静的付与する。
+ホスティング ランタイムの BaggageMiddleware が無いので、スパンに `gen_ai.agent.id` / `microsoft.tenant.id` が付かず exporter が **skip** する。`A365SpanProcessor` で両 ID を全スパンに静的付与する。
 
 ```python
 from opentelemetry.trace import get_tracer_provider
@@ -126,27 +134,18 @@ lab6 は **lab5 の変化点**なので、Agent ID 等の発行（`scripts\01〜
 
 ```powershell
 # このフォルダ（agent-custom-MAF-ACA-A365-obo-obs）で実行。
-# (1) lab5 の .env をコピー（lab5 を同マシンで実施済みなら最速）
-Copy-Item ..\..\lab5\agent-custom-MAF-ACA-A365-obo\.env .env
+# (1) lab6 用 .env を自動生成（lab5 の .env をベースに観測ペアを追記）
+pwsh .\scripts\00_generate-env.ps1
+#     別ペアに OtelWrite を付与した場合のみ:
+#     pwsh .\scripts\00_generate-env.ps1 -ObsBlueprintId <id> -ObsAgentId <id> -ObsBlueprintSecret <secret>
 
 # (2) 計装入りイメージを再ビルドして稼働アプリへ差し替える
 pwsh .\deploy-aca.ps1
 ```
 
-`deploy-aca.ps1` は `.env` を読んで、(a) 計装入りの新イメージを `az acr build` で焼き直し、(b) 受講者ごとの `rg-<userNN>` / `custom-maf-a365-obo-<userNN>` / ACR を解決し、(c) 既に在るアプリなら `az containerapp update --image …` で差し替える。
+`00_generate-env.ps1` は lab5 の `.env` をベースに観測（OTel スパン出口）3 変数を追記して本フォルダの `.env` を作る。`deploy-aca.ps1` は `.env` を読んで、(a) 計装入りの新イメージを `az acr build` で焼き直し、(b) 受講者ごとの `rg-<userNN>` / `custom-maf-a365-obo-<userNN>` / ACR を解決し、(c) 既に在るアプリなら `az containerapp update --image …` で差し替える。観測 3 変数も `.env` から env／ACA シークレット（`obs-blueprint-secret`）として注入する。
 
-> **スパン用 ID の env は追加不要**。`config.observability_agent_id()` / `observability_tenant_id()` は `AGENT365OBSERVABILITY__AGENTID` / `__TENANTID` が無ければ、`deploy-aca.ps1` が既に投入する **`AGENT_IDENTITY_APP_ID`（インスタンス appId）/ `AZURE_TENANT_ID`** にフォールバックする。別テナント/別 ID をスパンに刻みたい場合だけ、明示の上書きとして次を足す:
->
-> ```powershell
-> # .env から rg / アプリ名 / インスタンス appId / テナント GUID をすべて自動取得（プレースホルダ・$Me 不要）
-> $envMap = @{}; Get-Content .\.env | Where-Object { $_ -match '=' -and $_ -notmatch '^\s*#' } | ForEach-Object { $k,$v = $_ -split '=',2; $envMap[$k.Trim()] = $v.Trim() }
-> az containerapp update -g $envMap['ACA_RESOURCE_GROUP'] -n $envMap['ACA_APP_NAME'] `
->   --set-env-vars `
->     "AGENT365OBSERVABILITY__AGENTID=$($envMap['AGENT_IDENTITY_APP_ID'])" `
->     "AGENT365OBSERVABILITY__TENANTID=$($envMap['AZURE_TENANT_ID'])"
-> ```
->
-> ⚠️ ここに **Blueprint appId** を入れると **403 Agent ID mismatch**。必ず**インスタンス（Agent Identity）の appId**（`.env` の `AGENT_IDENTITY_APP_ID` と同値）を使う。
+> **スパン用 ID は自動生成**。`00_generate-env.ps1` は引数未指定なら egress 用 `BLUEPRINT_APP_ID` / `AGENT_IDENTITY_APP_ID` / `BLUEPRINT_CLIENT_SECRET` を観測ペアに流用する（OtelWrite を同ペアに付与済みの想定）。OtelWrite を **別ペア**に付与した場合だけ `-ObsBlueprintId/-ObsAgentId/-ObsBlueprintSecret` で上書きする。
 
 その後、[chat-ui-obo](../lab5/chat-ui-obo/)（lab5 と同じ OBO 用 UI）で **1〜2 往復**会話し、`invoke_agent`（ルート）/ `chat` / `execute_tool` のスパン ツリーを発生させる。lab6 は OBO 版なので会話の入口は `/obo-chat`（`Authorization: Bearer <user_token>` 必須）。`local-chat-app` はユーザートークンを載せないため OBO の往復にはならない。
 
@@ -264,7 +263,7 @@ dependencies
 ## 6. このラボの結論
 
 - **Microsoft OpenTelemetry Distro で A365 計装＝1 点、宛先は 2 つ**（運用＝Azure Monitor／統制＝Defender）。
-- 自前ホストゆえの変化点は **3 つ**（① Distro 初期化 ② token resolver ③ 静的スタンプ）。②③ はホスティング SDK が居れば自動。
+- 自前ホストゆえの変化点は **3 つ**（① Distro 初期化 ② token resolver ③ 静的スタンプ）。②③ はホスティング ランタイムが居れば自動。
 - **`{agentId}` はインスタンス（Agent Identity）appId が唯一の正**。Blueprint と取り違えると 403。
 
 > 次の [Lab7](../lab7/Lab1-3_m365.md) で **M365 インタラクション**を出すと、Purview / Defender への自動収録がさらに分かりやすくなる。
