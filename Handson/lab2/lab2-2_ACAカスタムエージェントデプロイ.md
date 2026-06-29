@@ -110,4 +110,4 @@ curl -X POST "$app/chat" `
 
 ---
 
-次へ: [lab2-3｜Agent ID 作成と統制検証](lab2-3_AgentID作成.md)
+次へ: [lab2-3｜Agent ID 作成](lab2-3_AgentID作成.md)

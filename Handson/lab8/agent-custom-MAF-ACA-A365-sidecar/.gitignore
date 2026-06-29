@@ -1,8 +1,0 @@
-# 復号済みシークレットを含む .env はコミット禁止
-.env
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/

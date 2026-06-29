@@ -5,7 +5,7 @@
 > このラボ（Lab2）は 3 部構成です。本ファイルは **全体概要**（§0–§2）。
 > - **lab2-1（本ファイル）**: 全体概要・対象エージェント・ねらい
 > - [lab2-2｜ACA カスタム エージェントのデプロイ](lab2-2_ACAカスタムエージェントデプロイ.md)（§3）
-> - [lab2-3｜Agent ID 作成と統制検証](lab2-3_AgentID作成.md)（§4–§9）
+> - [lab2-3｜Agent ID 作成](lab2-3_AgentID作成.md)（§4–§7。ガバナンス検証は lab4 に分離）
 
 > 親: [Lab1 全体まとめ](README.md)
 > 統制レベル: **中**。Blueprint 由来の Microsoft Entra Agent ID（SP）を主体に、CA / Purview / Defender / Entra governance が自動適用される。

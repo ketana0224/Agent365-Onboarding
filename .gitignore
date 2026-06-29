@@ -3,7 +3,6 @@ _task/
 lab/
 lab_backup/
 devTools/
-lab準備/
 report/
 A365_Host_Agent_Eval.md
 A365価値01.md
@@ -26,3 +25,8 @@ a365.generated.config.backup-*.json
 .env
 **/.env
 !**/.env.example
+
+# work-in-progress labs
+Handson/lab7/
+Handson/lab8/
+Handson/lab9/

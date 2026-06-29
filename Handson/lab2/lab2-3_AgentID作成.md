@@ -1,4 +1,4 @@
-# Lab2-3｜Agent ID 作成と統制検証
+# Lab2-3｜Agent ID 作成
 
 > 親: [lab2-1 全体概要](lab2-1_全体概要.md) ／ 前: [lab2-2 ACA カスタム エージェントのデプロイ](lab2-2_ACAカスタムエージェントデプロイ.md)
 > 本ファイルは Lab2 の **§4–§7（Setup / Publish / インスタンス作成 / 検証結果）**。実行体のデプロイ（§3）は [lab2-2](lab2-2_ACAカスタムエージェントデプロイ.md)。ガバナンスの検証（CA / Purview / Defender）は [lab4-1 Agent ID のガバナンス検証](../lab4/lab4-1_AgentIDガバナンス検証.md) に分離した。
@@ -72,7 +72,7 @@ a365 setup all --agent-name "custom-maf-agent-a365-$me"
 > **Agent ID Developer で実行**: OAuth2 の管理者同意だけは別ステップ。CLI が出力する **同意 URL を Global Administrator に共有**してもらう（完了まで `resourceConsents` が空・`completed: false` のことがある）。
 
 > M365 エージェント（Teams/Copilot）としてメッセージング エンドポイントも自動登録したい場合は `a365 setup all --m365` を使う。AI teammate は `--aiteammate`（このモードだけ `a365.config.json` を**実行前に手書き**で用意する必要がある。素のエージェント モードでは CLI が `a365.config.json` を自動生成するので手書き不要）。
-> 本ラボは素の `a365 setup all` で **Agent ID の発行と統制（§7）**まで。Teams からの実メッセージ往復（メッセージング エンドポイント登録）は後付け工程として [Lab1-3](../lab7/Lab1-3_m365.md) にまとめた。
+> 本ラボは素の `a365 setup all` で **Agent ID の発行と作成確認（§7）**まで。統制（CA / Purview / Defender）の検証は [lab4-1 Agent ID のガバナンス検証](../lab4/lab4-1_AgentIDガバナンス検証.md) に分離。Teams からの実メッセージ往復（メッセージング エンドポイント登録）は後付け工程として [Lab1-3](../lab7/Lab1-3_m365.md) にまとめた。
 
 ### 4.3 作成結果の検証
 

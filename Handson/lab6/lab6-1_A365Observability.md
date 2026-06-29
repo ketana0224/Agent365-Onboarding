@@ -173,35 +173,42 @@ Invoke-RestMethod -Method Post `
 ```
 
 ```kusto
-// ② A365 OTLP export の HTTP ステータス（200=着弾、4xx/skip=不着）
+// ② A365 OTLP export の起動/送出/拒否（200 だけだと汎用 HTTP ログを拾うので除外）
 ContainerAppConsoleLogs_CL
 | where ContainerAppName_s == "custom-maf-a365-obo-userNN"   // 自分の ACA 名
 | where TimeGenerated > ago(15m)
-| where Log_s has_any ("observabilityService", "otlp/agents", "200", "TenantIdInvalid", "Forbidden", "skip")
+| where Log_s !has "Response status: 200"
+| where Log_s has_any ("[ok]", "[warn]", "agent365_exporter", "otlp/agents", "TenantIdInvalid", "Forbidden", "exported", "skip")
 | project TimeGenerated, Log_s
 | order by TimeGenerated desc
 ```
 
-判定（ここは「正しく送れているか」の切り分け。**最終合否は §4.2 の CloudAppEvents**）:
+判定（ここは「正しく送れているか」の切り分け。**最終合否は §4.3 の Application Insights**。CloudAppEvents が未開通のため §4.2 は到達しない）:
 
 | 期待ログ | 意味 |
 |---|---|
-| export 行 `observabilityService/…/otlp/agents/<agentId>/traces` ＋ **`200`** | 送出 OK。ただし受理は未確定→§4.2 で要確認 |
+| `[ok] agent-framework インスツルメンテーションを有効化（force=True）` | 計装ON。これが無いと genAI スパンが出ない |
+| `agent365_exporter … exported N spans` | A365 送出 OK（毎回は出ない／確実に見るなら DEBUG）。受理は §4.3 で確認 |
 | `400 TenantIdInvalid` / `403 Forbidden` | export 拒否。変化点②（fmi_path 403）か agent_id 取り違え→§5。Blueprint appId だと 403 |
-| `skip` / `missing tenant or agent ID` | 変化点③ 未成立。スパンに ID が乗らず export されていない |
-| export 行が **1 本も無い** | ①往復してスパンが出たか・②MAF 計装（`enable_otel=True`）が入った版で再デプロイ済みか・③DEBUG 昇格を一時的に入れたかを確認 |
+| `No eligible genAI spans … nothing exported` | 計装は起動済みだが未往復／スパン未生成。チャットで往復させる |
+| 何も出ない | INFO では export 行は基本出ない。**一次確認は §4.3 の App Insights**（`invoke_agent`/`chat`/`execute_tool`）で行う |
 
 補助（起動時の前提が満たされているかの確認）:
 
 | 期待ログ | 意味 |
 |---|---|
-| `[ok] Microsoft OpenTelemetry Distro を初期化しました (A365=on, AppInsights=off)` | exporter 起動。これ単体は「着弾の証明ではない」 |
+| `[ok] Microsoft OpenTelemetry Distro を初期化しました (A365=on, AppInsights=on)` | exporter 起動。これ単体は「着弾の証明ではない」。App Insights は §4.3 で可視化 |
 | `[ok] A365 スパンへ tenant_id / agent_id を静的スタンプします (agent_id=…)` | `agent_id` が `.env` の `AGENT_IDENTITY_APP_ID`（インスタンス appId）と一致していること |
 | `Failed to set up A365 OpenAI Agents instrumentation.` | **無害**。MAF 構成では `openai-agents` 未使用。export には無関係 |
 
 > export 200 は通過点。`az containerapp logs show -g rg-userNN -n custom-maf-a365-obo-userNN --tail 80 --follow` でストリーム可。次に §4.2 で着弾を確定する。
 
-### 4.2 本合否｜Defender CloudAppEvents 着弾（〜5分・ライセンス割当だけで到達）
+### 4.2 本合否｜Defender CloudAppEvents 着弾（このデモ環境では未到達・参考）
+
+> ⚠️ **このデモ テナントでは `CloudAppEvents` が未プロビジョニングのため実装できません**（ライセンス/コネクタ/Security for AI 充足でも Advanced Hunting スキーマに不在）。本検証は **§4.3 の Application Insights** で代替します。以下は本来テナントで開通した場合の手順（参考）。
+
+<details>
+<summary>CloudAppEvents 着弾手順（クリックで開く・参考）</summary>
 
 > 前提＝**[lab6-0｜Defender 受け皿の有効化](./lab6-0_前提Defender有効化.md)**（プレビュー＋AI エージェント セキュリティ＋O365 コネクタ接続）を先に完了していること。さらに **`CloudAppEvents` はテナントに MDA O365 コネクタが生成した場合のみ**出現し、`Failed to resolve table 'CloudAppEvents'`（KS204）なら未生成＝コネクタ反映待ち/ライセンス未充足。その場合は **§4.1 export 200/sent を lab6 合格扱い**とし、§4.2 はテーブル生成後に確認する。
 
@@ -223,6 +230,8 @@ AgentsInfo
 
 [admin.microsoft.com](https://admin.microsoft.com) → Agents インベントリにも `invoke_agent` 行で反映。詳細は [lab7-2](../lab7/lab7-2_Purview_Defender自動適用.md)。
 
+</details>
+
 ### 4.3 本検証(代替)｜Application Insights (OTel) でトレース可視化
 
 > **このテナントでは CloudAppEvents が未プロビジョニングのため §4.2 は到達しない**(ライセンス/コネクタ/Security for AI 充足でも Advanced Hunting スキーマに CloudAppEvents 不在)。そこで **App Insights を本検証に使う**: 同一 Distro が A365 と App Insights の **2宛先へファンアウト**するので、App Insights にスパン ツリーが出れば「計装が動き export している」ことが GUI で確定する。
@@ -239,14 +248,43 @@ az monitor app-insights component create -g $rg -a "appi-$rg" -l $loc --workspac
 接続文字列を `agent-custom-MAF-ACA-A365-obo-obs/.env` の `APPLICATIONINSIGHTS_CONNECTION_STRING=` に貼り、`APPLICATIONINSIGHTS_NAME=appi-rg-userNN` を設定→`deploy-aca.ps1` 再実行で起動ログが `AppInsights=on` になる。
 
 ```kusto
-dependencies
+union dependencies, requests, traces
 | where timestamp > ago(1h)
-| where name in ("invoke_agent","chat") or name startswith "execute_tool"
-| project timestamp, name, operation_Id, duration, customDimensions
+| extend op = tostring(customDimensions["gen_ai.operation.name"])
+| where op in ("invoke_agent","chat","execute_tool")
+| project timestamp, name, op, operation_Id, duration, customDimensions
 | order by timestamp asc
 ```
 
-`operation_Id`（=`trace_id`）は A365 へ送る span の trace_id と **同一**。App Insights に `invoke_agent`/`chat`/`execute_tool*` が現れれば計装と export は健全。テナントで CloudAppEvents が開通すれば、同 `operation_Id` で運用（Azure Monitor）と統制（Defender）が 1 本のランとして突き合わせ可能になる。
+`operation_Id`（=`trace_id`）は A365 へ送る span の trace_id と **同一**。同じ `operation_Id` で `invoke_agent`→`chat`→`execute_tool` が 1 本のランに揃えば計装と export は健全。
+
+> 💡 **GUI で見やすく確認**: App Insights 左メニュー → **調査 → トランザクションの検索** → `invoke_agent` 行をクリック → **「エンド ツー エンドのトランザクションの詳細」** がガント チャートで開く。`invoke_agent`→`chat`→`execute_tool` の入れ子と所要時間が階層バーで一目（KQL の `operation_Id` 単位ビューを GUI 化したもの）。
+
+<details>
+<summary>ガント ビューの読み方（1往復 6.6秒の例・クリックで開く）</summary>
+
+![E2E トランザクション ガント](./E2E.png)
+
+| 階層 | スパン | エンドポイント | 状態 | 所要 | 意味 |
+|---|---|---|---|---|---|
+| 1 | `invoke_agent` | custom-maf-agent-a365-obo | — | 6.6秒 | エージェント1往復全体（親） |
+| └2 | `chat` gpt-5.4 | — | — | 2.6秒 | 1回目推論（ツール選択） |
+| 　└3 | token | login.microsoftonline.com `/oauth2/v2.0/token` | 200 | 308ms | OBO/AgentID トークン取得 |
+| 　└3 | token | login.microsoftonline.com `/oauth2/v2.0/token` | 200 | 144ms | トークン取得（2本目） |
+| 　└3 | APIM | apim-aigateway `/openai/.../chat/completions` | 200 | 1.9秒 | APIM 経由でモデル呼出 |
+| 　　└4 | backend | aif-ketana-prod `/.../chat/completions` | 200 | 1.8秒 | Azure OpenAI 本体 |
+| └2 | `execute_tool` | get_return_policy | — | 450ms | MCP ツール実行 |
+| 　└3 | APIM | apim-aigateway `POST /contoso-policy/mcp` | 200 | 28ms | MCP initialize |
+| 　　└4 | backend | contoso-policy-mcp(ACA) `POST /mcp` | 200 | 14.7ms | initialize 受理 |
+| 　└3 | APIM | apim-aigateway `POST /contoso-policy/mcp` | 202 | 17ms | notifications/initialized |
+| 　└3 | APIM | apim-aigateway `GET /contoso-policy/mcp` | 200 | 89ms | SSE ストリーム |
+| 1 | — | apim `POST /contoso-policy/mcp` | 200 | 4.8ms | tool 追加呼出 |
+| 1 | — | apim `DELETE /contoso-policy/mcp` | 200 | 3.9ms | MCP セッション終了 |
+| 1 | `chat` 2回目 | apim `/openai/.../chat/completions` | 200 | 3.6秒 | ツール結果→最終回答生成 |
+
+**読み方の要点**: 出口は全て `apim-aigateway`（直 OpenAI/MCP なし＝lab3 の出口1点集約）、状態は全て 200/202、token がモデル呼出直前（AgentID/OBO 認証）。インデント＝因果（invoke_agent が chat と tool を呼び、chat が APIM→OpenAI を呼ぶ親子関係）。
+
+</details>テナントで CloudAppEvents が開通すれば、同 `operation_Id` で運用（Azure Monitor）と統制（Defender）が 1 本のランとして突き合わせ可能になる。
 
 ---
 
