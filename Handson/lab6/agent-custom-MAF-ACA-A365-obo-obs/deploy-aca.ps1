@@ -122,6 +122,18 @@ az provider register --namespace Microsoft.ContainerRegistry --wait 2>$null | Ou
 # --- 1. RG 確認 ----------------------------------------------------------------
 az group create -n $ResourceGroup -l $Location --only-show-errors | Out-Null
 
+# --- 1b. App Insights を受講者ごとに用意（未設定なら自動作成） -------------------
+if (-not $appInsightsConn) {
+    $aiName = if ($envMap['APPLICATIONINSIGHTS_NAME']) { $envMap['APPLICATIONINSIGHTS_NAME'] } else { "appi-$ResourceGroup" }
+    Write-Host "[1/5] App Insights '$aiName' を確認/作成（受講者ごと）..." -ForegroundColor Yellow
+    az extension add --name application-insights --upgrade --only-show-errors 2>$null | Out-Null
+    $appInsightsConn = az monitor app-insights component show -g $ResourceGroup -a $aiName --query connectionString -o tsv 2>$null
+    if (-not $appInsightsConn) {
+        $appInsightsConn = az monitor app-insights component create -g $ResourceGroup -a $aiName -l $Location --query connectionString -o tsv
+    }
+    Write-Host "  App Insights 接続文字列を取得（AppInsights=on）。" -ForegroundColor DarkGray
+}
+
 # --- 2. Dockerfile でイメージをビルドして Container App をデプロイ ---------------
 Write-Host "[1/5] イメージをビルドして Container App をデプロイ（数分かかります）..." -ForegroundColor Yellow
 $envVars = @(

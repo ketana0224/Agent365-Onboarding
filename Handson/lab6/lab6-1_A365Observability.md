@@ -223,18 +223,20 @@ AgentsInfo
 
 [admin.microsoft.com](https://admin.microsoft.com) → Agents インベントリにも `invoke_agent` 行で反映。詳細は [lab7-2](../lab7/lab7-2_Purview_Defender自動適用.md)。
 
-### 4.3 （任意）Azure Monitor / Application Insights｜運用側の別宛先
+### 4.3 本検証(代替)｜Application Insights (OTel) でトレース可視化
 
-> §1 のとおり Azure Monitor は **A365 標準の格納先ではなく、Distro が追加でファンアウトする運用側の別宛先**。lab6 は App Insights を**自動作成しない**（`APPLICATIONINSIGHTS_CONNECTION_STRING` 既定で空＝`AppInsights=off`）。**運用ダッシュボードやスパン ツリーを GUI で見たい場合のみ**、自分で App Insights を 1 個作って有効化する（任意ステップ）。
+> **このテナントでは CloudAppEvents が未プロビジョニングのため §4.2 は到達しない**(ライセンス/コネクタ/Security for AI 充足でも Advanced Hunting スキーマに CloudAppEvents 不在)。そこで **App Insights を本検証に使う**: 同一 Distro が A365 と App Insights の **2宛先へファンアウト**するので、App Insights にスパン ツリーが出れば「計装が動き export している」ことが GUI で確定する。
+
+lab6 は既定で App Insights を**自動作成しない**が、obs 用 `.env` で `APPLICATIONINSIGHTS_CONNECTION_STRING=` が空のまま `deploy-aca.ps1` を実行すると、**受講者の RG に `appi-<RG>` を自動作成**して接続文字列を渡す（`APPLICATIONINSIGHTS_NAME=` を指定すればその名前で作成）。手動で先に作る場合は以下:
 
 ```powershell
-# 既存 LA ワークスペースに紐づけるワークスペース ベース App Insights を作成
+# 受講者ごと: 既存 LA ワークスペースに紐づくワークスペース ベース App Insights を作成
 $rg="rg-userNN"; $loc="eastus2"; $ws="workspace-rguserNNTdFM"
 $wsId = az monitor log-analytics workspace show -g $rg -n $ws --query id -o tsv
 az monitor app-insights component create -g $rg -a "appi-$rg" -l $loc --workspace $wsId --query connectionString -o tsv
 ```
 
-接続文字列を `agent-custom-MAF-ACA-A365-obo-obs/.env` の `APPLICATIONINSIGHTS_CONNECTION_STRING=` に貼り `deploy-aca.ps1` を再実行→起動ログが `AppInsights=on` になる。以後 **トランザクションの検索 / End-to-end** か Logs:
+接続文字列を `agent-custom-MAF-ACA-A365-obo-obs/.env` の `APPLICATIONINSIGHTS_CONNECTION_STRING=` に貼り、`APPLICATIONINSIGHTS_NAME=appi-rg-userNN` を設定→`deploy-aca.ps1` 再実行で起動ログが `AppInsights=on` になる。
 
 ```kusto
 dependencies
@@ -244,7 +246,7 @@ dependencies
 | order by timestamp asc
 ```
 
-`operation_Id`（=`trace_id`）は 4.2 の Defender スパンと **同一 ID** なので、運用（Azure Monitor）と統制（Defender）を 1 本のランとして突き合わせられる。
+`operation_Id`（=`trace_id`）は A365 へ送る span の trace_id と **同一**。App Insights に `invoke_agent`/`chat`/`execute_tool*` が現れれば計装と export は健全。テナントで CloudAppEvents が開通すれば、同 `operation_Id` で運用（Azure Monitor）と統制（Defender）が 1 本のランとして突き合わせ可能になる。
 
 ---
 
