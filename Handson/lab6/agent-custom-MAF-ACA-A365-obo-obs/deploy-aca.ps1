@@ -81,6 +81,10 @@ $blueprintSecret    = $envMap['BLUEPRINT_CLIENT_SECRET']
 # OBO（ユーザー委任型）
 $blueprintApiAudience = $envMap['BLUEPRINT_API_AUDIENCE']
 $graphScope           = $envMap['GRAPH_SCOPE']
+# Agent 365 Observability（OTel スパン出口）
+$obsBlueprintId       = $envMap['AGENT365OBSERVABILITY__BLUEPRINTID']
+$obsAgentId           = $envMap['AGENT365OBSERVABILITY__AGENTID']
+$obsBlueprintSecret   = $envMap['AGENT365OBSERVABILITY__BLUEPRINTSECRET']
 
 # PROJECT_ENDPOINT / MODEL_DEPLOYMENT_NAME は APIM 経由化後は未使用（切り戻し用）。
 if (-not $apimAoaiEndpoint) { throw '.env に APIM_AOAI_ENDPOINT がありません（APIM 経由化に必須）。' }
@@ -145,6 +149,11 @@ if ($blueprintAppId) { $envVars += "BLUEPRINT_APP_ID=$blueprintAppId" }
 if ($agentIdAppId)   { $envVars += "AGENT_IDENTITY_APP_ID=$agentIdAppId" }
 # Blueprint シークレットは ACA シークレット（secretref）として注入する
 if ($blueprintSecret) { $envVars += "BLUEPRINT_CLIENT_SECRET=secretref:blueprint-secret" }
+# Agent 365 Observability（OTel スパン出口）。tenant は AZURE_TENANT_ID を共有。
+if ($obsBlueprintId)  { $envVars += "AGENT365OBSERVABILITY__BLUEPRINTID=$obsBlueprintId" }
+if ($obsAgentId)      { $envVars += "AGENT365OBSERVABILITY__AGENTID=$obsAgentId" }
+if ($tenantId)        { $envVars += "AGENT365OBSERVABILITY__TENANTID=$tenantId" }
+if ($obsBlueprintSecret) { $envVars += "AGENT365OBSERVABILITY__BLUEPRINTSECRET=secretref:obs-blueprint-secret" }
 
 # ACR 名（RG 内に無ければ作成）。英数字のみ・グローバル一意にするため suffix を付与。
 $acrName = ($envMap['ACA_ACR_NAME'])
@@ -178,9 +187,12 @@ try {
         # 先にレジストリ資格情報とシークレットを登録してから image を更新する
         az containerapp registry set -n $AppName -g $ResourceGroup `
             --server "$acrName.azurecr.io" --username $acrName --password $acrPassword --only-show-errors | Out-Null
-        if ($blueprintSecret) {
+        $secretArgs = @()
+        if ($blueprintSecret)    { $secretArgs += "blueprint-secret=$blueprintSecret" }
+        if ($obsBlueprintSecret) { $secretArgs += "obs-blueprint-secret=$obsBlueprintSecret" }
+        if ($secretArgs.Count -gt 0) {
             az containerapp secret set -n $AppName -g $ResourceGroup `
-                --secrets "blueprint-secret=$blueprintSecret" --only-show-errors | Out-Null
+                --secrets $secretArgs --only-show-errors | Out-Null
         }
         az containerapp update -n $AppName -g $ResourceGroup `
             --image $image --set-env-vars $envVars --only-show-errors | Out-Null
@@ -195,8 +207,11 @@ try {
             '--ingress', 'external', '--target-port', '8000',
             '--env-vars'
         ) + $envVars
-        if ($blueprintSecret) {
-            $createArgs += @('--secrets', "blueprint-secret=$blueprintSecret")
+        $secretArgs = @()
+        if ($blueprintSecret)    { $secretArgs += "blueprint-secret=$blueprintSecret" }
+        if ($obsBlueprintSecret) { $secretArgs += "obs-blueprint-secret=$obsBlueprintSecret" }
+        if ($secretArgs.Count -gt 0) {
+            $createArgs += @('--secrets') + $secretArgs
         }
         az containerapp create @createArgs --only-show-errors | Out-Null
     }
