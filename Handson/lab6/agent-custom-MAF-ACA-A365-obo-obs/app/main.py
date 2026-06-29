@@ -140,6 +140,9 @@ def _configure_observability() -> None:  # Lab6 observability
     import logging
     logging.basicConfig(level=logging.INFO)
     logging.getLogger("azure.monitor.opentelemetry.exporter").setLevel(logging.WARNING)
+    # 検証用: export の HTTP ステータス（200/partialSuccess/rejectedSpans）を可視化。運用では削除。
+    logging.getLogger("microsoft.opentelemetry").setLevel(logging.DEBUG)
+    print("[ok] A365 DEBUG ログ有効")
 
     from microsoft.opentelemetry import use_microsoft_opentelemetry
 
