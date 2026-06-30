@@ -4,19 +4,39 @@
 - **対象テナント**: `<TENANT_ID>`
 - **対象サブスクリプション**: `<SUBSCRIPTION_NAME>` 
 
+# 0.共通設定（最初に1回だけ実行）
+- 以降のセクション（1〜6）は、ここで設定した環境変数（`$tenantId` / `$subscription` / `$subId` / `$domain` / `$h` / `$aiRg` / `$aiName` など）を共有して使う。
+- Graph トークン `$token` / `$h` は約1時間で失効する。4〜6 を実行する前に失効していたら、このブロックを再実行してから進める。
+
+```powershell
+# ===== 環境変数（適宜書き換え）=====
+$tenantId     = "<TENANT_ID>"
+$subscription = "<SUBSCRIPTION_NAME>"
+$location     = "eastus2"
+
+# 共有 App Insights（lab6 / APIM と同一の集約先）
+$aiRg   = "<APPINSIGHTS_RESOURCE_GROUP>"
+$aiName = "<APPINSIGHTS_NAME>"
+
+# ===== サブスクリプション選択 =====
+az account set --subscription $subscription
+$subId = az account show --subscription $subscription --query id -o tsv
+
+# ===== Graph トークン（az rest は $ を含む Graph URI で壊れるため Invoke-RestMethod を使用）=====
+$token = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv
+$h = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+
+# ===== 初期ドメイン (xxxx.onmicrosoft.com) を自動取得 =====
+$domain = (Invoke-RestMethod -Method Get -Headers $h `
+    -Uri "https://graph.microsoft.com/v1.0/domains").value |
+    Where-Object isInitial | Select-Object -ExpandProperty id
+Write-Host "利用ドメイン: $domain"
+```
+
 # 1.受講者ユーザを作る
 - user01～user12 の12ユーザー
 
 ```powershell
-# === 共通設定 ===
-$tenantId = "<TENANT_ID>"
-
-# このテナントの初期ドメイン (xxxx.onmicrosoft.com) を自動取得
-$domain = az rest --method get `
-  --uri "https://graph.microsoft.com/v1.0/domains?`$select=id,isInitial" `
-  --query "value[?isInitial].id | [0]" -o tsv
-Write-Host "利用ドメイン: $domain"
-
 # 初期パスワード (受講者には初回サインインで変更させる)
 $initialPassword = "Handson@$(Get-Random -Minimum 100000 -Maximum 999999)"
 Write-Host "初期パスワード: $initialPassword  (12ユーザー共通・控えておくこと)"
@@ -49,12 +69,6 @@ Write-Host "初期パスワード: $initialPassword  (12ユーザー共通・控
 - rg-user01～rg-user12 の12のリソースグループ
 
 ```powershell
-# === 共通設定 ===
-$subscription = "<SUBSCRIPTION_NAME>"
-$location     = "eastus2"
-
-az account set --subscription $subscription
-
 # === rg-user01〜rg-user12 を作成 ===
 1..12 | ForEach-Object {
     $n  = "user{0:D2}" -f $_
@@ -75,13 +89,6 @@ az account set --subscription $subscription
 - リソースグループに対する全ての権限
 
 ```powershell
-# === 共通設定 ===
-$subscription = "<SUBSCRIPTION_NAME>"
-$subId  = az account show --subscription $subscription --query id -o tsv
-$domain = az rest --method get `
-  --uri "https://graph.microsoft.com/v1.0/domains?`$select=id,isInitial" `
-  --query "value[?isInitial].id | [0]" -o tsv
-
 # 付与するロール: リソースグループに対する全権限 = Owner
 # (権限の委任まで不要なら "Contributor" に変更可)
 $role = "Owner"
@@ -116,19 +123,6 @@ $role = "Owner"
 -必要な権限は Agent ID Developer
 
 ```powershell
-# === 共通設定 ===
-$tenantId = "<TENANT_ID>"
-
-# Graph トークン取得 (az rest は $ を含む Graph URI で壊れるため Invoke-RestMethod を使用)
-$token = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv
-$h = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
-
-# 初期ドメイン取得
-$domain = (Invoke-RestMethod -Method Get -Headers $h `
-    -Uri "https://graph.microsoft.com/v1.0/domains").value |
-    Where-Object isInitial | Select-Object -ExpandProperty id
-Write-Host "利用ドメイン: $domain"
-
 # "Agent ID Developer (エージェント ID 開発者)" ロール定義の ID を取得
 # 注意: roleDefinitions は $top / $filter(displayName) が不安定なため、
 #       クエリ無しで全件取得(@odata.nextLink でページング)し、部分一致で特定する
@@ -192,19 +186,6 @@ $assignedPrincipals = $existing.principalId
 - lab5 の `03_grant-agentid-graph-delegated.ps1` が Agent Identity SP に Graph 委任権限の `oauth2PermissionGrants`（テナント同意相当）を作成するために必要。これが無いと `Authorization_RequestDenied / Insufficient privileges` で失敗する。
 
 ```powershell
-# === 共通設定 ===
-$tenantId = "<TENANT_ID>"
-
-# Graph トークン取得 (az rest は $ を含む Graph URI で壊れるため Invoke-RestMethod を使用)
-$token = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv
-$h = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
-
-# 初期ドメイン取得
-$domain = (Invoke-RestMethod -Method Get -Headers $h `
-    -Uri "https://graph.microsoft.com/v1.0/domains").value |
-    Where-Object isInitial | Select-Object -ExpandProperty id
-Write-Host "利用ドメイン: $domain"
-
 # "Cloud Application Administrator (クラウド アプリケーション管理者)" ロール定義の ID を取得
 # 注意: roleDefinitions は $top / $filter(displayName) が不安定なため、
 #       クエリ無しで全件取得(@odata.nextLink でページング)し、部分一致で特定する
@@ -262,5 +243,44 @@ $assignedPrincipals = $existing.principalId
     }
 }
 ```
+
+# 6.共有 App Insights の接続文字列を取得できるようにする（lab6）
+- lab6 のエージェントは APIM と**同一の共有 App Insights `<APPINSIGHTS_NAME>`（`<APPINSIGHTS_RESOURCE_GROUP>`）**へテレメトリを集約し、E2E トレースを成立させる。
+- lab6 の `scripts\00_generate-env.ps1` は、この共有 App Insights の接続文字列を `az` で自動取得して `.env` に焼き込む。**受講者ユーザーは共有 RG に権限が無いため取得に失敗する**ので、その App Insights リソース 1 個だけにスコープして **Reader（閲覧者）** を付与する。
+- 接続文字列の取得（`Microsoft.Insights/components/read`）に必要十分な最小権限。RG 全体ではなくリソース単位に絞る。
+
+```powershell
+# App Insights リソースID（このリソースだけにスコープ）
+$aiId = az resource list -g $aiRg -n $aiName `
+    --resource-type "Microsoft.Insights/components" --query "[0].id" -o tsv
+if (-not $aiId) { throw "App Insights '$aiName' が $aiRg に見つかりません。" }
+Write-Host "対象 App Insights: $aiId"
+
+# === user01〜user12 に Reader（リソース スコープ）を付与 ===
+1..12 | ForEach-Object {
+    $n   = "user{0:D2}" -f $_
+    $upn = "$n@$domain"
+
+    $objectId = az ad user show --id $upn --query id -o tsv
+    if (-not $objectId) {
+        Write-Warning "ユーザー未検出のためスキップ: $upn"
+        return
+    }
+
+    az role assignment create `
+        --assignee-object-id $objectId `
+        --assignee-principal-type User `
+        --role "Reader" `
+        --scope "$aiId" `
+        --output none
+
+    if ($LASTEXITCODE -eq 0) { Write-Host "付与: $upn -> $aiName (Reader)" }
+    else { Write-Warning "付与失敗: $upn -> $aiName" }
+}
+```
+
+> 付与後、受講者側は lab6 で `pwsh .\scripts\00_generate-env.ps1 -Force` を再実行すれば、`APPLICATIONINSIGHTS_CONNECTION_STRING` が自動で `.env` に焼き込まれる。
+>
+> 権限を渡さない運用なら、運営側で接続文字列を取得して受講者に配布し、`pwsh .\scripts\00_generate-env.ps1 -Force -AppInsightsConnectionString "<接続文字列>"` で手動指定させる。
 
 
