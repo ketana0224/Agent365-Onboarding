@@ -29,6 +29,10 @@ param(
     [string]$ObsAgentId,
     # 観測用 Blueprint シークレット（未指定なら既存 .env → egress の BLUEPRINT_CLIENT_SECRET）
     [string]$ObsBlueprintSecret,
+    # 共有 App Insights 名（APIM と E2E 集約する宛先。既定: appi-foundryobs-jyenh）
+    [string]$AppInsightsName = 'appi-foundryobs-jyenh',
+    # App Insights 接続文字列を直接指定（未指定なら $AppInsightsName から自動解決）
+    [string]$AppInsightsConnectionString,
     # 既存 .env があっても上書きする
     [switch]$Force
 )
@@ -64,11 +68,29 @@ if (-not $ObsBlueprintId)     { $ObsBlueprintId     = $map['BLUEPRINT_APP_ID'] }
 if (-not $ObsAgentId)         { $ObsAgentId         = $map['AGENT_IDENTITY_APP_ID'] }
 if (-not $ObsBlueprintSecret) { $ObsBlueprintSecret = $map['BLUEPRINT_CLIENT_SECRET'] }
 
+# --- 共有 App Insights 接続文字列を自動解決（APIM と E2E 集約） ----------------
+# APIM(apim-aigateway-eastus2) は共有 App Insights(appi-foundryobs-jyenh) に診断ログを
+# 流している。アプリも同じ App Insights に出さないと E2E が分断するため、ここで接続文字列を
+# 自動取得して .env に焼き込む（deploy-aca.ps1 はこの値が空だと throw する）。
+if (-not $AppInsightsConnectionString) { $AppInsightsConnectionString = $map['APPLICATIONINSIGHTS_CONNECTION_STRING'] }
+if (-not $AppInsightsConnectionString) {
+    Write-Host "共有 App Insights '$AppInsightsName' の接続文字列を取得中..." -ForegroundColor Yellow
+    az extension add --name application-insights --upgrade --only-show-errors 2>$null | Out-Null
+    $aiId = az resource list -n $AppInsightsName --resource-type 'Microsoft.Insights/components' --query '[0].id' -o tsv 2>$null
+    if ($aiId) {
+        $AppInsightsConnectionString = az monitor app-insights component show --ids $aiId --query connectionString -o tsv 2>$null
+    }
+    if (-not $AppInsightsConnectionString) {
+        Write-Warning "App Insights '$AppInsightsName' の接続文字列を自動取得できませんでした（az login / サブスクリプションを確認）。`n  -AppInsightsConnectionString で手動指定するか、az login 後に再実行してください。"
+    }
+}
+
 # --- 観測キーを差し替え/追記 --------------------------------------------------
 $obs = [ordered]@{
     'AGENT365OBSERVABILITY__BLUEPRINTID'     = $ObsBlueprintId
     'AGENT365OBSERVABILITY__AGENTID'         = $ObsAgentId
     'AGENT365OBSERVABILITY__BLUEPRINTSECRET' = $ObsBlueprintSecret
+    'APPLICATIONINSIGHTS_CONNECTION_STRING'  = $AppInsightsConnectionString
 }
 $out = [System.Collections.Generic.List[string]]::new()
 $seen = @{}
@@ -89,3 +111,4 @@ Write-Host "生成しました: $DestEnv" -ForegroundColor Green
 Write-Host "  BLUEPRINTID = $ObsBlueprintId"
 Write-Host "  AGENTID     = $ObsAgentId"
 Write-Host "  SECRET      = $(if ($ObsBlueprintSecret) { '(set)' } else { '(empty)' })"
+Write-Host "  APPINSIGHTS = $(if ($AppInsightsConnectionString) { "(set) $AppInsightsName" } else { '(empty) ※未解決。deploy-aca.ps1 が throw します' })"
