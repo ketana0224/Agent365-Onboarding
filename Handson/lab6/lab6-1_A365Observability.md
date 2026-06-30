@@ -91,6 +91,8 @@ use_microsoft_opentelemetry(
 
 ### 変化点② トークン resolver を渡す
 
+> **なぜ要るのか**: 変化点①の `a365_enable_observability_exporter=True` で「A365 へ span を HTTP 送信する処理」が起動し、その送信に **OtelWrite トークンが必須**になる。本来は Agent 365 SDK のホスティング ランタイムがこのトークン取得を肩代わりするが、本ラボは自前 FastAPI ホストでランタイムが無い。つまり **「exporter=True」＋「ランタイム不在（自前ホスト）」** が同時に成立するときだけ、この手動 resolver が必要になる（`exporter=False` なら送信自体が止まるので resolver は呼ばれない）。
+
 ホスティング ランタイムが無いので FIC 用の env が注入されず、既定の `DefaultAzureCredential`（＝ACA マネージド ID）になり **403**。そこで出口化（Step 2a）と同じ **fmi_path（Blueprint + `fmi_path=AgentIdentity` → `client_credentials`）** を msal で同期実行する `_build_a365_token_resolver()` を `main.py` に実装し、観測リソース `api://9b975845-…/.default`（`Agent365.Observability.OtelWrite` ロール）のトークンを返す。
 
 ```python
@@ -99,6 +101,8 @@ a365_token_resolver=_build_a365_token_resolver()
 ```
 
 ### 変化点③ tenant_id / agent_id を静的スタンプ
+
+> **なぜ要るのか**: A365 exporter は span を送る前に各 span の `gen_ai.agent.id` / `microsoft.tenant.id` を確認し、**両方無いと "missing tenant or agent ID" で skip（破棄）** する。本来は Agent 365 SDK のホスティング ランタイムの BaggageMiddleware が baggage 経由で自動付与するが、本ラボは自前 FastAPI ホストでそれが無い。つまり変化点②（トークン）と同じく **「ランタイム不在（自前ホスト）」だから手で肩代わりする** 配線で、②＝認可を通す（無いと 403）、③＝識別子を付けて skip させない、という対の関係。
 
 ホスティング ランタイムの BaggageMiddleware が無いので、スパンに `gen_ai.agent.id` / `microsoft.tenant.id` が付かず exporter が **skip** する。`A365SpanProcessor` で両 ID を全スパンに静的付与する。
 
@@ -118,12 +122,12 @@ get_tracer_provider().add_span_processor(
 
 ### 変化点④ MAF 計装を発火させる（スパン生成）
 
-①〜③は export 経路を整えるが、その手前で **スパンを生成** するのは agent-framework の `setup_observability()`。引数なしだと no-op でスパンが1本も作られず export も発火しない。`enable_otel=True` を明示して `invoke_agent` / `chat` / `execute_tool` を生成させる。
+①〜③は export 経路を整えるが、その手前で **スパンを生成** するのは agent-framework のインスツルメンテーション。`invoke_agent` / `chat` / `execute_tool` のスパンを生成させる。既定で有効だが、env/disable の状態に依らず確実に有効化するため `enable_instrumentation(force=True)` を明示呼び出しする（Distro が確立済みの TracerProvider をそのまま使うため `set_tracer_provider` は no-op）。
 
 ```python
-from agent_framework.observability import setup_observability
+from agent_framework.observability import enable_instrumentation
 
-setup_observability(enable_otel=True)
+enable_instrumentation(force=True)
 ```
 
 > 検証で export の 200/4xx を即時に目視したいときだけ、一時的に `microsoft.opentelemetry` を DEBUG に上げる（**運用では不要**・機微データ漏洩を避けるため戻す）:
