@@ -40,7 +40,7 @@ flowchart LR
 | Lab1 | [レジストリ同期だけでは統制できない](Handson/lab1/Lab1-1_レジストリ同期.md) | 「見えるだけ」の弱い段を体感 | 30 分 |
 | Lab2 | [Agent ID を発行して統制主体にする](Handson/lab2/lab2-1_全体概要.md) | `a365 setup all` で発行し CA でブロック | 50 分 |
 | Lab3 | [出口を 1 点に集約](Handson/lab3/lab3-1_出口1点集約とAgentID差し替え.md) | `_egress_token()` 集約、Agent ID 差し替え配線 | 30 分 |
-| Lab4 | [出口を Agent ID 化（キルスイッチ）](Handson/lab4/extLab2-4_AgentID出口化_配線と検証.md) | 止めると LLM/MCP が遮断 | 50 分 |
+| Lab4 | [(任意) Conditional Access でエージェントを条件付き制御](Handson/lab4/lab4-1_AgentIDガバナンス検証.md) | Agent ID を CA で条件付きブロック／ガバナンス検証 | 50 分 |
 | Lab5 | [OBO で二重統制](Handson/lab5/lab5-1_OBOユーザー委任とAgentID二重統制.md) | ユーザー本人の権限で Graph、二重統制 | 40 分 |
 | Lab6 | [A365 Observability](Handson/lab6/lab6-1_A365Observability.md) | per-span な行動を管理センターへ可観測化 | 40 分 |
 
