@@ -107,8 +107,22 @@
 
 ```powershell
 cd ..\lab2\agent-custom-MAF-ACA-A365
+
+# 1) 仮想環境を作成して有効化（初回のみ）
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 2) 依存をインストール（agent-framework はプレリリースのため --pre 必須）
+python -m pip install --upgrade pip
+python -m pip install --pre -r requirements.txt
+
+# 3) 起動（別ターミナルなら .venv を再度 Activate してから）
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+> - `uvicorn: The term ... is not recognized` は **venv 未作成／未 Activate**（＝依存未インストール）が原因。上の 1)〜2) を先に実行する。
+> - 2 回目以降は `.\.venv\Scripts\Activate.ps1` → `uvicorn ...` だけでよい。
+> - ローカルでは `az login` の資格情報（`DefaultAzureCredential`）で Foundry に認証するため、事前に `az login` 済みで Foundry プロジェクトへのアクセス権が必要。MCP を叩くには `.env`（`CONTOSO_MCP_URL` / `CONTOSO_MCP_KEY` など）も設定する。
 
 **B) ACA デプロイ済みを使う** … 公開 FQDN（`https://<app>.azurecontainerapps.io`）を 7.3 の ⚙️ で指定。
 
@@ -144,6 +158,8 @@ http://localhost:8080
 
 | 症状 | 原因 | 対処 |
 |---|---|---|
+| `uvicorn ... is not recognized` | venv 未作成／未 Activate（依存未インストール） | 7.1 A) の `python -m venv .venv` → `Activate.ps1` → `pip install --pre -r requirements.txt` を先に実行 |
+| 起動時に `agent_framework` の ImportError | プレリリース依存が未取得 | `pip install --pre -r requirements.txt`（`--pre` を付ける） |
 | 疎通確認が赤・接続できない | エージェント未起動 / バックエンド URL 誤り | A) `uvicorn` 起動を確認、B) FQDN を ⚙️ に設定 |
 | ブラウザから直叩きで CORS エラー | エージェントに CORS 無し | `serve.py` の `/api/chat` プロキシ経由で叩く（直 `:8000` は不可） |
 | 502 backend 接続不可 | ローカル未起動 / ポート不一致 | ポート 8000 とバックエンド URL を一致させる |

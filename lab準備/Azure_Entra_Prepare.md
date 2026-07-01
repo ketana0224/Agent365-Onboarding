@@ -5,8 +5,8 @@
 - **対象サブスクリプション**: `<SUBSCRIPTION_NAME>` 
 
 # 0.共通設定（最初に1回だけ実行）
-- 以降のセクション（1〜6）は、ここで設定した環境変数（`$tenantId` / `$subscription` / `$subId` / `$domain` / `$h` / `$aiRg` / `$aiName` など）を共有して使う。
-- Graph トークン `$token` / `$h` は約1時間で失効する。4〜6 を実行する前に失効していたら、このブロックを再実行してから進める。
+- 以降のセクション（1〜7）は、ここで設定した環境変数（`$tenantId` / `$subscription` / `$subId` / `$domain` / `$h` / `$aiRg` / `$aiName` など）を共有して使う。
+- Graph トークン `$token` / `$h` は約1時間で失効する。4〜7 を実行する前に失効していたら、このブロックを再実行してから進む。
 
 ```powershell
 # ===== 環境変数（適宜書き換え）=====
@@ -181,7 +181,71 @@ $assignedPrincipals = $existing.principalId
 }
 ```
 
-# 5.OBO の管理者同意（lab5）が実行できるようにする
+# 5.Agent 365 でエージェントを管理できるようにする
+- 必要な権限は **AI Administrator（AI 管理者）**
+- Agent 365 管理センターでのエージェント管理（Block / Unblock 等）や AI 関連機能の管理に必要。
+- 組み込みロール定義 ID は固定で `d2562ede-74db-457e-a7b6-544e236ebb61`。名前検索が不安定な場合はこの ID を直接使ってもよい。
+
+```powershell
+# "AI Administrator (AI 管理者)" ロール定義の ID を取得
+# 注意: roleDefinitions は $top / $filter(displayName) が不安定なため、
+#       クエリ無しで全件取得(@odata.nextLink でページング)し、部分一致で特定する
+$roleName = "AI Administrator"
+$roles = @()
+$uri = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions"
+do {
+    $resp  = Invoke-RestMethod -Method Get -Headers $h -Uri $uri
+    $roles += $resp.value
+    $uri    = $resp.'@odata.nextLink'
+} while ($uri)
+
+$roleDef = $roles | Where-Object {
+    $_.displayName -like "*AI Administrator*" -or $_.displayName -like "*AI 管理者*"
+} | Select-Object -First 1
+if (-not $roleDef) { throw "ロール '$roleName' が見つかりません。テナントで利用可能か確認してください。" }
+$roleDefId = $roleDef.id
+Write-Host "ロール: $($roleDef.displayName)  ID: $roleDefId"
+
+# 既存のロール割り当てを取得 (重複付与回避用)
+$existing = (Invoke-RestMethod -Method Get -Headers $h `
+    -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$roleDefId'").value
+$assignedPrincipals = $existing.principalId
+
+# === user01〜user12 に AI Administrator を付与 ===
+1..12 | ForEach-Object {
+    $n   = "user{0:D2}" -f $_
+    $upn = "$n@$domain"
+
+    $objectId = az ad user show --id $upn --query id -o tsv
+    if (-not $objectId) {
+        Write-Warning "ユーザー未検出のためスキップ: $upn"
+        return
+    }
+
+    if ($assignedPrincipals -contains $objectId) {
+        Write-Host "スキップ (既存): $upn"
+        return
+    }
+
+    $body = @{
+        "@odata.type"      = "#microsoft.graph.unifiedRoleAssignment"
+        roleDefinitionId   = $roleDefId
+        principalId        = $objectId
+        directoryScopeId   = "/"
+    } | ConvertTo-Json
+
+    try {
+        Invoke-RestMethod -Method Post -Headers $h `
+            -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments" `
+            -Body $body | Out-Null
+        Write-Host "付与: $upn ($roleName)"
+    } catch {
+        Write-Warning "付与失敗: $upn -> $($_.Exception.Message)"
+    }
+}
+```
+
+# 6.OBO の管理者同意（lab5）が実行できるようにする
 - 必要な権限は **Cloud Application Administrator（クラウド アプリケーション管理者）**
 - lab5 の `03_grant-agentid-graph-delegated.ps1` が Agent Identity SP に Graph 委任権限の `oauth2PermissionGrants`（テナント同意相当）を作成するために必要。これが無いと `Authorization_RequestDenied / Insufficient privileges` で失敗する。
 
@@ -244,7 +308,7 @@ $assignedPrincipals = $existing.principalId
 }
 ```
 
-# 6.共有 App Insights の接続文字列を取得できるようにする（lab6）
+# 7.共有 App Insights の接続文字列を取得できるようにする（lab6）
 - lab6 のエージェントは APIM と**同一の共有 App Insights `<APPINSIGHTS_NAME>`（`<APPINSIGHTS_RESOURCE_GROUP>`）**へテレメトリを集約し、E2E トレースを成立させる。
 - lab6 の `scripts\00_generate-env.ps1` は、この共有 App Insights の接続文字列を `az` で自動取得して `.env` に焼き込む。**受講者ユーザーは共有 RG に権限が無いため取得に失敗する**ので、その App Insights リソース 1 個だけにスコープして **Reader（閲覧者）** を付与する。
 - 接続文字列の取得（`Microsoft.Insights/components/read`）に必要十分な最小権限。RG 全体ではなくリソース単位に絞る。
