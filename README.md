@@ -1,5 +1,7 @@
 # Agent 365 Onboarding ハンズオン
 
+> ユーザー情報: https://purple-rock-08f9ce800.7.azurestaticapps.net/
+
 > Microsoft Entra **Agent ID** を中核に、1 つのカスタムエージェント（MAF + Azure Container Apps）を **少しずつ強化しながら**、「ID の強さで効くガバナンスがどう変わるか」を Lab0〜Lab6 で体験するハンズオン。
 
 > Copilot Studio や Microsoft Foundry であれば自動的、また Microsoft 365 Agents SDK であれば実装を簡素化できますが、このハンズオンではカスタムエージェントを用いて Agent 365 の機能を実習します。
