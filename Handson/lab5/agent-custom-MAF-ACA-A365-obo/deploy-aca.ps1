@@ -284,12 +284,13 @@ Write-Host "Auth Debug : $baseUrl/debug/auth  (出口トークンの種別・ク
 Write-Host "Health     : $baseUrl/healthz"
 Write-Host "出口モード  : USE_AGENT_ID_EGRESS=$useAgentIdEgress / OBO aud=$blueprintApiAudience" -ForegroundColor Green
 Write-Host ''
+$me = if ($AppName -match '(user\d+)$') { $Matches[1] } else { 'userNN' }
 Write-Host 'スモークテスト:' -ForegroundColor Cyan
 Write-Host "  python smoke_test.py $baseUrl                 # /chat（自律型 Step 2a）"
 Write-Host ''
 Write-Host 'OBO（/obo-chat, Step 2b）は先に scripts\01〜03 を実行してから、次のいずれか:' -ForegroundColor Cyan
 Write-Host '  方法A（Streamlit UI）:'
-Write-Host '    cd scripts; pwsh .\04_generate-chat-ui-env.ps1 -DisplayName "contoso-obo-chat-ui-userNN"'
+Write-Host "    cd scripts; pwsh .\04_generate-chat-ui-env.ps1 -DisplayName ""contoso-obo-chat-ui-$me"""
 Write-Host '    cd ..\..\chat-ui-obo; streamlit run app.py'
 Write-Host '  方法B（スクリプト）:'
 Write-Host "    pwsh .\scripts\test-obo-end-to-end.ps1 -BaseUrl $baseUrl -ClientId <scripts\01 の Public Client appId>"
