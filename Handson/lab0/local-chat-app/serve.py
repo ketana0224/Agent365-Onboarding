@@ -82,8 +82,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json(400, {"error": "message が空です。"})
             return
 
-        # バックエンドはサーバー側で固定。クライアントからの指定は受け付けない。
-        self._proxy_chat(message)
+        # backend は UI (⚙️) から上書き可。空ならサーバー側既定値を使う。
+        self._proxy_chat(message, payload.get("backend"))
 
     # ---- 内部処理 ----------------------------------------------------
     def _normalize_backend(self, value: str | None) -> str:
@@ -92,8 +92,8 @@ class Handler(SimpleHTTPRequestHandler):
             backend = "http://" + backend
         return backend
 
-    def _proxy_chat(self, message: str) -> None:
-        backend = self._normalize_backend(self._default_backend)
+    def _proxy_chat(self, message: str, backend_override: str | None = None) -> None:
+        backend = self._normalize_backend(backend_override)
         url = f"{backend}/chat"
         body = json.dumps({"message": message}).encode("utf-8")
         req = urllib.request.Request(
@@ -128,8 +128,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json(500, {"error": f"プロキシ内部エラー: {ex}"})
 
     def _handle_health(self, query: dict[str, list[str]]) -> None:
-        # クライアントの backend クエリは無視し、サーバー側固定のバックエンドを使う。
-        backend = self._normalize_backend(self._default_backend)
+        # backend クエリがあればそれを、なければサーバー側既定値を使う。
+        backend = self._normalize_backend((query.get("backend") or [None])[0])
         try:
             with urllib.request.urlopen(f"{backend}/healthz", timeout=10) as resp:
                 ok = 200 <= resp.status < 300

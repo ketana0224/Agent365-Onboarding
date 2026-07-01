@@ -4,9 +4,11 @@
 // Contoso サポート — ローカルチャット フロントエンド
 // ---------------------------------------------------------------------
 // ブラウザ → 同一オリジンのプロキシ (serve.py) の POST /api/chat へ送る。
-// プロキシがサーバー側で固定したエージェントに中継するため、
-// エージェント本体の URL はクライアントには一切露出しない。
+// ⚙️ で入力した backend エンドポイントを一緒に送り、プロキシが
+// その {backend}/chat に中継する（空欄なら serve.py の既定値）。
 // =====================================================================
+
+const STORAGE_KEY = "local-chat-backend";
 
 const el = {
   messages: document.getElementById("messages"),
@@ -15,12 +17,18 @@ const el = {
   settings: document.getElementById("settings"),
   settingsToggle: document.getElementById("settingsToggle"),
   newChatBtn: document.getElementById("newChatBtn"),
+  backendUrl: document.getElementById("backendUrl"),
+  saveBtn: document.getElementById("saveBtn"),
   healthBtn: document.getElementById("healthBtn"),
   healthResult: document.getElementById("healthResult"),
   statusDot: document.getElementById("statusDot"),
 };
 
 let busy = false;
+
+// 保存済み backend エンドポイント（空欄なら serve.py の既定値）
+let backend = localStorage.getItem(STORAGE_KEY) || "";
+el.backendUrl.value = backend;
 
 // 初期のウェルカム画面を保持（「新しいチャット」で復元する）
 const WELCOME_HTML = el.messages.innerHTML;
@@ -33,6 +41,12 @@ el.settingsToggle.addEventListener("click", () => {
 });
 
 el.newChatBtn.addEventListener("click", () => newChat());
+
+el.saveBtn.addEventListener("click", () => {
+  backend = el.backendUrl.value.trim();
+  localStorage.setItem(STORAGE_KEY, backend);
+  checkHealth(true);
+});
 
 el.healthBtn.addEventListener("click", () => {
   checkHealth(true);
@@ -121,7 +135,7 @@ async function send() {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text }),
+      body: JSON.stringify({ message: text, backend: backend || undefined }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -156,7 +170,8 @@ async function send() {
 // --------------------------------------------------------------------
 async function checkHealth(verbose = false) {
   try {
-    const res = await fetch("/api/health");
+    const q = backend ? `?backend=${encodeURIComponent(backend)}` : "";
+    const res = await fetch(`/api/health${q}`);
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.ok) {
       setStatus("ok");

@@ -24,11 +24,20 @@
     </header>
 
     <section id="settings" class="settings settings--hidden">
+      <label class="settings__field">
+        <span>エージェント エンドポイント (backend)</span>
+        <input
+          id="backendUrl"
+          type="url"
+          placeholder="https://<app>.azurecontainerapps.io"
+        />
+      </label>
       <p class="settings__hint">
-        エージェントへの接続はローカルのプロキシ (<code>serve.py</code>) が
-        中継します。接続先はサーバー側で設定されており、この画面には表示されません。
+        ブラウザ → ローカルのプロキシ (<code>serve.py</code>) → このエンドポイントの
+        <code>/chat</code> に中継します。空欄の場合は <code>serve.py</code> の既定値を使います。
       </p>
       <div class="settings__actions">
+        <button id="saveBtn" class="btn">保存</button>
         <button id="healthBtn" class="btn btn--ghost">疎通確認</button>
       </div>
       <p id="healthResult" class="settings__health"></p>

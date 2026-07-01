@@ -132,8 +132,8 @@ python -m pip install --upgrade pip
 # ルートの .venv を有効化済みなら python で OK
 cd Handson\lab0\local-chat-app
 python serve.py            # 接続先は serve.py 内に固定、起動時にブラウザが自動で開く
-python serve.py --port 9000 # ポート変更
-python serve.py --no-open   # ブラウザを自動で開かない
+# python serve.py --port 9000 # ポート変更
+# python serve.py --no-open   # ブラウザを自動で開かない
 ```
 
 - **接続先は `serve.py` 内に固定**されており、UI（ブラウザ）からは見えない・変更できない。ローカルでエージェントを起動する必要はない。
