@@ -153,7 +153,7 @@ Get-Content a365.generated.config.json | ConvertFrom-Json | Format-List `
 > §3.3 のスモークテストが通っていれば、ACA のデプロイ・MI・公開 FQDN はすべて成立済みのため**このステップは省略してよい**。エージェントが応答しない場合の切り分けに使う。
 
 ```powershell
-cd C:\GitHub\Agent365-Onboarding\_report\Handson\lab2\agent-custom-MAF-ACA-A365
+cd C:\Agent365-Onboarding\Handson\lab2\agent-custom-MAF-ACA-A365
 pwsh -NoProfile -File ./verify-azure-resources.ps1
 ```
 
