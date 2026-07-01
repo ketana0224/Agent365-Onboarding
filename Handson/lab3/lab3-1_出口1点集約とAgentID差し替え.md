@@ -47,6 +47,61 @@ flowchart LR
 
 > APIM の `validate-azure-ad-token` は **audience と発行元のみ**検証し appid を見ないため、SAMI でも Agent ID でも `aud=https://cognitiveservices.azure.com` のトークンなら同じ API を通過する。**出口を差し替えても APIM 側の設定変更は不要**。
 
+> **補足: APIM 側で「Agent ID かどうか」を検証して弾くこともできる。**
+> Entra Agent ID のアクセストークンには通常のトークンには無い専用クレームが付与される。判定の要は **`xms_act_fct`（Actor facets）に `11`（= AgentIdentity）が含まれるか**。この `11` は OBO（ユーザー代理）・自律動作（app-only）・エージェント用ユーザーアカウントの **3 シナリオすべてで付与**されるため、「そもそも Agent ID か」を最も確実に判定できる。
+>
+> | クレーム | 値 | 意味 |
+> |---|---|---|
+> | `xms_act_fct`（アクター） | `11` | **AgentIdentity（全エージェントシナリオで付与）** |
+> | `xms_sub_fct`（サブジェクト） | `11` | AgentIdentity（自律動作時） |
+> | `xms_sub_fct` | `13` | AgentIDUser（エージェント専用ユーザーアカウント） |
+>
+> **ハマりどころ:**
+> 1. **`idtyp` だけでは判定できない** — `idtyp` は `user` / `app` の 2 値のみで、通常のユーザー/アプリとエージェントを区別できない。必ず `xms_act_fct` / `xms_sub_fct` を併用する。
+> 2. **「11」は複数クレームに登場し意味が違う** — 別の `xms_idrel` では `11 = GDAP user`（エージェントとは無関係）。**必ずクレーム名とセットで**判定する。
+> 3. **複数値・スペース区切りの文字列**（例 `"xms_act_fct": "3 9 11"`）— 完全一致では判定できない。`validate-azure-ad-token` / `validate-jwt` の `<required-claims>` はクレーム値の**完全一致マッチ**なのでスペース区切りの複合値には使えない。`.AsJwt()` で取り出して `Split(' ').Contains("11")` で判定する。
+>
+> ```xml
+> <inbound>
+>   <!-- 1. まず通常の検証（署名 / iss / aud） -->
+>   <validate-jwt header-name="Authorization" failed-validation-httpcode="401">
+>     <openid-config url="https://login.microsoftonline.com/{{tenant-id}}/v2.0/.well-known/openid-configuration" />
+>     <audiences>
+>       <audience>https://cognitiveservices.azure.com</audience>
+>     </audiences>
+>   </validate-jwt>
+>
+>   <!-- 2. xms_act_fct に 11（AgentIdentity）が含まれるか判定 -->
+>   <set-variable name="isAgent" value="@{
+>       var jwt = context.Request.Headers
+>                   .GetValueOrDefault("Authorization","")
+>                   .Split(' ').Last().AsJwt();
+>       if (jwt == null) return false;
+>       var actFct = jwt.Claims.GetValueOrDefault("xms_act_fct","");
+>       return actFct.Split(' ').Contains("11");   // ← 値「11」= AgentIdentity
+>   }" />
+>
+>   <choose>
+>     <when condition="@(!context.Variables.GetValueOrDefault<bool>(&quot;isAgent&quot;))">
+>       <return-response>
+>         <set-status code="403" reason="Not an agent identity" />
+>       </return-response>
+>     </when>
+>   </choose>
+> </inbound>
+> ```
+>
+> **シナリオ別のクレーム:**
+> - OBO（ユーザー代理）: `idtyp=user` / `xms_act_fct=11`
+> - 自律動作（app-only）: `idtyp=app` / `xms_act_fct=11` / `xms_sub_fct=11`
+> - エージェント用ユーザーアカウント: `idtyp=user` / `xms_act_fct=11` / **`xms_sub_fct=13`**
+>
+> **さらに「特定のエージェントだけ」を許可**したい場合は、上記の Agent 判定に加えて `azp` / `appid`（＝ Agent Identity の appId＝`AGENT_IDENTITY_APP_ID`）も併用する。appid は単一値なので `<required-claims>` の完全一致マッチで検証できる。
+>
+> つまり **「差し替えても通る（既定）」＝ aud/iss のみの緩い検証**、**「Agent ID 以外は弾く」＝ `xms_act_fct=11` を判定**、**「この特定エージェントのみ」＝ さらに `appid` を検証**、の 3 段階を APIM 側で選べる。本ラボは最初の緩い検証のまま（出口差し替えの体験が目的なので APIM は変更しない）。
+>
+> 出典: Microsoft Learn「[Token claims reference for agent IDs - Microsoft Entra Agent ID](https://learn.microsoft.com/en-us/entra/agent-id/agent-token-claims)」（最終更新 2026-06-11）。
+
 ---
 
 ## 前提
