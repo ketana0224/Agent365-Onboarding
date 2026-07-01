@@ -106,7 +106,7 @@ curl -X POST "$app/chat" `
 - 初回 `/chat` が 401/403 の場合は **ロール伝播待ち**。数分おいて再試行。
 - まとめて 5 問叩く場合: `python smoke_test.py <App URL>`。
 
-> この時点では実行体は **MI（`18b76884…`）** で Foundry を呼んでいる。これは「アプリが動く」ことの確認であり、Agent ID（`9ff24e53…`）とは **別の主体**。Agent ID は §4 のとおり `a365 setup` が既に発行済みで、実行時の Agent ID 認証は Agent 365 SDK + 生成シークレット/MI が担う。
+> この時点では実行体は **MI（`18b76884…`）** で Foundry を呼んでいる。これは「アプリが動く」ことの確認であり、Agent ID（`9ff24e53…`）とは **別の主体**。Agent ID は §4 のとおり `a365 setup` が既に発行済みで、実行時の Agent ID 認証は Microsoft 365 Agents SDK のメッセージング ホスト（`/api/messages`）+ 生成シークレット/MI が担う。
 
 ---
 

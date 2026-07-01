@@ -8,6 +8,8 @@
 
 **Microsoft OpenTelemetry Distro（Agent 365・Foundry・Azure Monitor 共通の統一 observability SDK）を使って、カスタムエージェントに Agent 365 向けの計装を入れる。** これだけで、そのエージェントの行動（`invoke_agent` / `chat` / `execute_tool`）が **Defender / 管理センター / Purview** の管理面に per-span で見えるようになる。
 
+> **パッケージ移行期の注意**: A365 Observability は、旧来の Agent 365 Python SDK パッケージ群（`microsoft-agents-a365-observability-*` / `microsoft-agents-a365-runtime`）から、単一パッケージ `microsoft-opentelemetry` へのコード移行期にある。旧 `microsoft_agents_a365.observability.*` の import は `microsoft.opentelemetry.a365.*` に、`configure(...)` は `use_microsoft_opentelemetry(enable_a365=True, ...)` に置き換わる（認可スコープも `https://api.powerplatform.com/.default` → `api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite` に変わる破壊的変更あり）。本ラボは新パッケージ `microsoft-opentelemetry` を前提に進める。移行手順の一次情報: [MIGRATION_A365.md（microsoft/opentelemetry-distro-python）](https://github.com/microsoft/opentelemetry-distro-python/blob/main/MIGRATION_A365.md)
+
 > Distro は A365 専用品ではなく、内部に A365 向けコンポーネント（`microsoft.opentelemetry.a365.*` / `A365SpanProcessor`）を同梱し `enable_a365` で点火する。旧来の単体「Agent 365 Observability SDK」は別経路（現在は非推奨）。新規は Distro が推奨。
 
 Lab2〜Lab5 はアクセス制御（CA / OBO / キルスイッチ）を効かせた。本ラボは統制を上げるのではなく、**「何をしたか」のテレメトリ**を足す。

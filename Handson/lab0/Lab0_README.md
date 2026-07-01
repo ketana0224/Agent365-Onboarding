@@ -32,7 +32,29 @@
 
 > 全段の詳細は [Handson 目次](../README.md) を参照。本章は **その手前** の素体確認。
 
-## 3. 用語マップ
+## 3. Step ↔ Lab 対応表
+
+| Step（提示フロー） | サブ項目 | 対応するLab |
+|---|---|---|
+| **Step1: APIM登録（連携）** | 出口集約・レート/認証/コンテンツ安全性 | 前提 |
+| **Step2: 3Pエージェント作成（SDK）** | Azureで簡易Agent作成 | Lab0 / Lab2 |
+| | Foundryで簡易Agent作成 | (本日未実施) Lab9 / Lab8 |
+| | APIMとの接続・認証 | Lab3 |
+| **Step3: Agent365登録（Entra Agent ID）** | Agent Identity発行／紐付け | Lab2 |
+| | Blueprint→Instance関係理解（冒頭で説明） | Lab0 / Lab2 |
+| | 作ってA365管理下でBlock制御まで確認 | Lab2 / Lab4 |
+| **Step4: 認証パターン体験（超重要）** | A. ユーザー委任型（OBO） | Lab5 |
+| | B. 自律型（Agent Identity） | Lab4 / Lab3 |
+| **Step5: Agent365への公開（Registry登録）** | Agent Card / Manifest登録 | 別Handson |
+| | 一覧に表示 | Lab1 |
+| **Step6: 管理・ガバナンス（運用）** | ポリシー設定 | 別Handson |
+| | アクセス制御（CA） | Lab2 / Lab4 |
+| | ライフサイクル（停止/削除） | Lab4 |
+| **Step7: 観測（Observability）** | ログ確認／実行トレース／ツール呼び出し確認 | Lab6 |
+
+---
+
+## 4. 用語マップ
 
 | 用語 | 一言 | 出てくる章 |
 |---|---|---|
@@ -44,7 +66,7 @@
 
 ---
 
-## 4. 前提リソース（疎通対象）
+## 5. 前提リソース（疎通対象）
 
 | 区分 | 既存資産 | 出口 |
 |---|---|---|
@@ -62,7 +84,7 @@
 
 ---
 
-## 5. local-chat-app（素体を叩く UI）
+## 6. local-chat-app（素体を叩く UI）
 
 `agent-custom-MAF-ACA-A365`（`POST /chat`）を、ローカルの HTML+JS チャット UI から叩くための **依存ゼロ**（Python 標準ライブラリのみ）アプリ。
 
@@ -77,9 +99,9 @@
 
 ---
 
-## 6. 疎通手順
+## 7. 疎通手順
 
-### 6.1 エージェントを起動（A: ローカル / B: ACA）
+### 7.1 エージェントを起動（A: ローカル / B: ACA）
 
 **A) ローカル起動**
 
@@ -88,9 +110,9 @@ cd ..\lab2\agent-custom-MAF-ACA-A365
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-**B) ACA デプロイ済みを使う** … 公開 FQDN（`https://<app>.azurecontainerapps.io`）を 6.3 の ⚙️ で指定。
+**B) ACA デプロイ済みを使う** … 公開 FQDN（`https://<app>.azurecontainerapps.io`）を 7.3 の ⚙️ で指定。
 
-### 6.2 プロキシ（UI）を起動
+### 7.2 プロキシ（UI）を起動
 
 ```powershell
 cd local-chat-app
@@ -102,7 +124,7 @@ python serve.py --backend https://<app>.azurecontainerapps.io  # 既定バック
 - 既定: `http://localhost:8080` で配信、バックエンドは `http://localhost:8000`
 - 環境変数 `LOCAL_CHAT_BACKEND` でも既定バックエンドを指定可
 
-### 6.3 ブラウザで開く
+### 7.3 ブラウザで開く
 
 ```
 http://localhost:8080
@@ -112,7 +134,7 @@ http://localhost:8080
 
 ---
 
-## 7. 成果物 / 検証
+## 8. 成果物 / 検証
 
 - 「**返品ポリシーを教えて**」と送ると、エージェントが MCP（`contoso-policy-mcp`）を呼んで回答する。
 - 応答 `{"agent","reply"}` の `reply` が表示され、`agent` 名がメタ表示される。
