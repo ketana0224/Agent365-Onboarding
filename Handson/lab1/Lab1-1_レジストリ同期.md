@@ -3,7 +3,7 @@
 **ホスト型（Copilot Studio / Foundry Agent Service）は Agent 365 に自動登録されるため、本章の Registry sync の対象ではない（本章は外部 AI 基盤上のエージェントを同期して可視化するレイヤー）。**
 
 > 統制レベル: **最弱**。在庫に「見える」だけで、Entra Agent ID を主体として持たないため CA / Purview / Defender は効かない。
-> 親: [Lab1 全体まとめ](README.md)
+> 親: [Handson README](../README.md) ／ 次: [Lab2｜Agent ID を発行して統制主体にする](../lab2/lab2-1_全体概要.md)
 > 一次情報: [Registry sync（preview）](https://learn.microsoft.com/microsoft-agent-365/admin/agent-registry)
 
 ---
@@ -11,9 +11,9 @@
 ## 1. ゴール
 
 - **外部 AI 基盤上のエージェント**が Registry sync により Agent 365 レジストリ（M365 管理センターの在庫）に **見える** ことを確認する。
-- ただし Entra Agent ID を主体として持たないため、**CA でブロック等の主体統制はできない**（＝可視化のみ・弱い統制）ことを Lab1-2 との対比で示す。
+- ただし Entra Agent ID を主体として持たないため、**CA でブロック等の主体統制はできない**（＝可視化のみ・弱い統制）ことを Lab2（Agent ID 発行）との対比で示す。
 
-> **位置づけ：Lab1-1 は“外部基盤エージェントの棚卸し（可視化同期）”のレイヤー**であり、**自作エージェントを“統制”する仕組みではない**。**ホスト型（Copilot Studio / Foundry Agent Service）は Microsoft が身分証と実行ランタイムの両方を管理し、Agent 365 に自動登録される**ため Registry sync は不要で、本章はあくまで外部基盤の同期を扱う。自作エージェントを本当に統制したい場合は **Agent ID を付与する Lab1-2** が正道。
+> **位置づけ：Lab1-1 は“外部基盤エージェントの棚卸し（可視化同期）”のレイヤー**であり、**自作エージェントを“統制”する仕組みではない**。**ホスト型（Copilot Studio / Foundry Agent Service）は Microsoft が身分証と実行ランタイムの両方を管理し、Agent 365 に自動登録される**ため Registry sync は不要で、本章はあくまで外部基盤の同期を扱う。自作エージェントを本当に統制したい場合は **Agent ID を発行する Lab2** が正道。
 
 ## 2. 実現方式
 
@@ -21,7 +21,7 @@
 |---|---|---|---|
 | **A: Registry sync（本章の主題）** | M365 管理センターで外部基盤を接続し `Sync agents` で在庫へ同期 | 外部クラウドの認証情報（後述） | 外部基盤エージェントの可視化（Unmanaged） |
 
-> 本章の主題は **A（Registry sync）**。Lab1-1 の“弱い統制”は外部基盤の可視化同期であって、自作エージェント統制の手段ではないことに注意。自作エージェントを統制したい場合は Lab1-2 の Agent ID 付与へ進む。
+> 本章の主題は **A（Registry sync）**。Lab1-1 の“弱い統制”は外部基盤の可視化同期であって、自作エージェント統制の手段ではないことに注意。自作エージェントを統制したい場合は Lab2 の Agent ID 発行へ進む。
 
 ---
 
@@ -55,7 +55,7 @@
 
 > ⚠️ 接続〜同期は **M365 管理センターのポータル操作**で、テナントの **Agent 365 Frontier プログラム参加 + 対応ライセンス**が前提。CLI からは自動化できない。
 
-1. M365 管理センター → **エージェント** → **すべてのエージェント** を開く
+1. [M365 管理センター（admin.microsoft.com）](https://admin.microsoft.com) を開く → **エージェント** → **すべてのエージェント**
 2. **Registry sync** の Web パーツ → **管理** → **＋ プラットフォームの接続**
 3. **名前 / 説明** を入力
 4. **プラットフォーム**（例: Databricks Genie）を選択
@@ -125,9 +125,9 @@ $r = Invoke-RestMethod -Method Post -Uri "https://accounts.azuredatabricks.net/o
 
 ---
 
-## 4. 検証観点（Lab1-2 との対比）
+## 4. 検証観点（Lab2 との対比）
 
-| 観点 | Lab1-1（本章） | Lab1-2（Agent ID 付き） |
+| 観点 | Lab1-1（本章） | Lab2（Agent ID 付き） |
 |---|---|---|
 | 在庫に見えるか | ○（**外部基盤の同期のみ**で可視化） | ○ |
 | アクセス主体として CA でブロックできるか | **×（主体が無い）** | ○ |
