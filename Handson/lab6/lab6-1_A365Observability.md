@@ -53,14 +53,14 @@ flowchart LR
 
 ## 2. このエージェントは「自社コード（種別 A）」
 
-> 自由度は A 系（自社コード）＞ B（マネージド）＞ C（SaaS）。本ラボは最も手配線が多い「A 自前」でも CloudAppEvents に着弾できることを実証する。
+> 自由度は A 系（自社コード）＞ B（マネージド）＞ C（SaaS）。本ラボは最も手配線が多い「A 自前」を扱う。
 
 | 種別 | ランタイム | 計装 | A365認証/baggage | 例 |
 |---|---|---|---|---|
 | **A 自前** ← 本ラボ | ランタイム無し(手配線) | 手動(Distro) | **手動(②③)** | 本ラボ MAF+FastAPI |
-| A+SDK | Agent 365 SDK ホスト | 手動(Distro) | 自動(SDKランタイム) | lab8 sidecar / extLab2 フル機能 |
+| A+SDK | Agent 365 SDK ホスト | 手動(Distro) | 自動(SDKランタイム) | MAF + Microsoft 365 Agents SDK（/api/messages ホスト） |
 | B | Microsoft マネージド | 自動 | 自動 | Copilot Studio / Foundry Hosted |
-| C | コード不可の SaaS | Direct OTel | Direct OTel | §5 参照（本ラボでは使わない） |
+| C | コード不可の SaaS | Direct OTel | Direct OTel | 本ラボ対象外 |
 
 - **計装**: OTel スパン生成。B のみ自動、A 系は Distro を自分で初期化。
 - **A365認証/baggage**: OtelWrite トークン取得＋`gen_ai.agent.id`/`microsoft.tenant.id` スタンプ。SDK ホストが居れば自動、自前ホストは token resolver(②)＋A365SpanProcessor(③)を手配線。
