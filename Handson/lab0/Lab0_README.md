@@ -101,7 +101,7 @@
 
 ## 7. 前提ツール（Python / pip）
 
-`serve.py` は **Python 標準ライブラリのみ**で動く（UI 起動に追加パッケージは不要）が、ハンズオン全体（Lab2 以降のエージェントビルド・`a365` CLI など）で Python / pip を使う。仮想環境 `.venv` は **リポジトリ ルート**（`C:\GitHub\Agent365-Onboarding\.venv`）に作る。
+`serve.py` は **Python 標準ライブラリのみ**で動く（UI 起動に追加パッケージは不要）が、ハンズオン全体（Lab2 以降のエージェントビルド・`a365` CLI など）で Python / pip を使う。仮想環境 `.venv` は **リポジトリ ルート**（`C:\Agent365-Onboarding\.venv`）に作る。
 
 | ツール | 要件 |
 |---|---|
@@ -110,7 +110,7 @@
 
 ```powershell
 # リポジトリ ルートで実行
-cd C:\GitHub\Agent365-Onboarding
+cd C:\Agent365-Onboarding
 python --version        # 3.10 以上であること
 python -m pip --version # pip が使えること
 
