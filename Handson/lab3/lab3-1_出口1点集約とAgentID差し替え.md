@@ -286,8 +286,15 @@ Block は **新規のトークン発行を止めるだけ**で、すでに発行
 **即時に遮断を実証したいとき（対策）**: ACA のリビジョンを再起動してプロセス内のトークン キャッシュを捨てる。
 
 ```powershell
+# .env から RG / アプリ名を読み込んで変数化（userNN を直接埋め込まない）
+$envMap = @{}; Get-Content .env | Where-Object { $_ -match '^\s*[^#].*=' } | ForEach-Object {
+  $k,$v = $_ -split '=',2; $envMap[$k.Trim()] = $v.Trim()
+}
+$rg  = $envMap['ACA_RESOURCE_GROUP']
+$app = $envMap['ACA_APP_NAME']
+
 # 最新リビジョンを再起動してキャッシュをクリア
 az containerapp revision restart `
-  -g rg-userNN -n custom-maf-a365-egress-userNN `
-  --revision $(az containerapp revision list -g rg-userNN -n custom-maf-a365-egress-userNN --query "[0].name" -o tsv)
+  -g $rg -n $app `
+  --revision $(az containerapp revision list -g $rg -n $app --query "[0].name" -o tsv)
 ```
