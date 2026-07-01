@@ -28,14 +28,19 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import threading
 import urllib.error
 import urllib.request
+import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_BACKEND = os.environ.get("LOCAL_CHAT_BACKEND", "http://localhost:8000")
+DEFAULT_BACKEND = os.environ.get(
+    "LOCAL_CHAT_BACKEND",
+    "https://custom-maf-agent-a365.proudflower-d41f2cf1.eastus2.azurecontainerapps.io",
+)
 REQUEST_TIMEOUT = float(os.environ.get("LOCAL_CHAT_TIMEOUT", "120"))
 
 
@@ -77,8 +82,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json(400, {"error": "message が空です。"})
             return
 
-        backend = self._normalize_backend(payload.get("backend"))
-        self._proxy_chat(backend, message)
+        # バックエンドはサーバー側で固定。クライアントからの指定は受け付けない。
+        self._proxy_chat(message)
 
     # ---- 内部処理 ----------------------------------------------------
     def _normalize_backend(self, value: str | None) -> str:
@@ -87,7 +92,8 @@ class Handler(SimpleHTTPRequestHandler):
             backend = "http://" + backend
         return backend
 
-    def _proxy_chat(self, backend: str, message: str) -> None:
+    def _proxy_chat(self, message: str) -> None:
+        backend = self._normalize_backend(self._default_backend)
         url = f"{backend}/chat"
         body = json.dumps({"message": message}).encode("utf-8")
         req = urllib.request.Request(
@@ -108,7 +114,6 @@ class Handler(SimpleHTTPRequestHandler):
                 {
                     "error": f"バックエンド応答エラー: HTTP {ex.code}",
                     "detail": detail,
-                    "backend": url,
                 },
             )
         except urllib.error.URLError as ex:
@@ -116,23 +121,21 @@ class Handler(SimpleHTTPRequestHandler):
                 502,
                 {
                     "error": f"バックエンドに接続できません: {ex.reason}",
-                    "backend": url,
-                    "detail": "エージェントが起動しているか、バックエンド URL を確認してください。",
+                    "detail": "エージェントが起動しているか確認してください。",
                 },
             )
         except Exception as ex:  # noqa: BLE001
-            self._send_json(500, {"error": f"プロキシ内部エラー: {ex}", "backend": url})
+            self._send_json(500, {"error": f"プロキシ内部エラー: {ex}"})
 
     def _handle_health(self, query: dict[str, list[str]]) -> None:
-        backend = self._normalize_backend(
-            (query.get("backend") or [None])[0]
-        )
+        # クライアントの backend クエリは無視し、サーバー側固定のバックエンドを使う。
+        backend = self._normalize_backend(self._default_backend)
         try:
             with urllib.request.urlopen(f"{backend}/healthz", timeout=10) as resp:
                 ok = 200 <= resp.status < 300
-            self._send_json(200, {"ok": ok, "backend": backend})
+            self._send_json(200, {"ok": ok})
         except Exception as ex:  # noqa: BLE001
-            self._send_json(200, {"ok": False, "error": str(ex), "backend": backend})
+            self._send_json(200, {"ok": False, "error": str(ex)})
 
     def _send_json(self, status: int, obj: dict) -> None:
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -153,6 +156,11 @@ def main() -> None:
         default=DEFAULT_BACKEND,
         help=f"既定のエージェント基底 URL (既定: {DEFAULT_BACKEND})。UI から上書き可。",
     )
+    parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="起動時にブラウザを自動で開かない。",
+    )
     args = parser.parse_args()
 
     handler = partial(Handler, default_backend=args.backend.rstrip("/"))
@@ -164,6 +172,9 @@ def main() -> None:
     print(f"  既定 backend: {args.backend.rstrip('/')}")
     print("  停止     : Ctrl+C")
     print("=" * 60)
+    if not args.no_open:
+        # サーバー起動直後にブラウザを開く（file:// ではなく http:// で開かせる）
+        threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

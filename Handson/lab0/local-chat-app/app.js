@@ -4,12 +4,9 @@
 // Contoso サポート — ローカルチャット フロントエンド
 // ---------------------------------------------------------------------
 // ブラウザ → 同一オリジンのプロキシ (serve.py) の POST /api/chat へ送る。
-// プロキシが {backend}/chat ({"message": "..."} -> {"agent","reply"}) に
-// 中継するため、エージェント本体は無改変・CORS 設定不要のまま使える。
+// プロキシがサーバー側で固定したエージェントに中継するため、
+// エージェント本体の URL はクライアントには一切露出しない。
 // =====================================================================
-
-const STORAGE_KEY = "local-chat-backend-url";
-const DEFAULT_BACKEND = "http://localhost:8000";
 
 const el = {
   messages: document.getElementById("messages"),
@@ -18,14 +15,11 @@ const el = {
   settings: document.getElementById("settings"),
   settingsToggle: document.getElementById("settingsToggle"),
   newChatBtn: document.getElementById("newChatBtn"),
-  backendUrl: document.getElementById("backendUrl"),
-  saveBtn: document.getElementById("saveBtn"),
   healthBtn: document.getElementById("healthBtn"),
   healthResult: document.getElementById("healthResult"),
   statusDot: document.getElementById("statusDot"),
 };
 
-let backend = localStorage.getItem(STORAGE_KEY) || DEFAULT_BACKEND;
 let busy = false;
 
 // 初期のウェルカム画面を保持（「新しいチャット」で復元する）
@@ -34,23 +28,13 @@ const WELCOME_HTML = el.messages.innerHTML;
 // --------------------------------------------------------------------
 // 初期化
 // --------------------------------------------------------------------
-el.backendUrl.value = backend;
-
 el.settingsToggle.addEventListener("click", () => {
   el.settings.classList.toggle("settings--hidden");
 });
 
 el.newChatBtn.addEventListener("click", () => newChat());
 
-el.saveBtn.addEventListener("click", () => {
-  backend = el.backendUrl.value.trim().replace(/\/+$/, "") || DEFAULT_BACKEND;
-  localStorage.setItem(STORAGE_KEY, backend);
-  el.settings.classList.add("settings--hidden");
-  checkHealth();
-});
-
 el.healthBtn.addEventListener("click", () => {
-  backend = el.backendUrl.value.trim().replace(/\/+$/, "") || DEFAULT_BACKEND;
   checkHealth(true);
 });
 
@@ -68,8 +52,14 @@ el.input.addEventListener("input", autoGrow);
 // サンプルチップ
 bindChips();
 
-// 起動時に疎通確認
-checkHealth();
+// file:// で直接開かれた場合はプロキシ (serve.py) が無く、相対パス /api/* が
+// 解決できないため必ず失敗する。原因が分かるよう明示ガードする。
+if (location.protocol === "file:") {
+  showFileProtocolGuard();
+} else {
+  // 起動時に疎通確認
+  checkHealth();
+}
 
 // --------------------------------------------------------------------
 // 新しいチャット（会話をクリアしてウェルカム画面に戻す）
@@ -94,6 +84,24 @@ function bindChips() {
   });
 }
 
+// file:// 直開き時の案内（送信を止め、正しい起動方法を表示）
+function showFileProtocolGuard() {
+  setStatus("bad");
+  setHealth("NG: file:// で開いています。serve.py 経由で開いてください。", false);
+  removeWelcome();
+  appendMessage(
+    "error",
+    "file:// で直接開いているため動作しません。\n" +
+      "このUIはプロキシ (serve.py) 経由でのみ動きます。\n\n" +
+      "  cd Handson/lab0/local-chat-app\n" +
+      "  python serve.py\n\n" +
+      "起動後、ブラウザで http://localhost:8080 を開いてください。"
+  );
+  el.input.disabled = true;
+  el.sendBtn.disabled = true;
+  el.input.placeholder = "http://localhost:8080 で開いてください（serve.py 経由）";
+}
+
 // --------------------------------------------------------------------
 // メッセージ送信
 // --------------------------------------------------------------------
@@ -113,7 +121,7 @@ async function send() {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text, backend }),
+      body: JSON.stringify({ message: text }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -144,17 +152,15 @@ async function send() {
 }
 
 // --------------------------------------------------------------------
-// 疎通確認 (/api/health?backend=...)
+// 疎通確認 (/api/health)
 // --------------------------------------------------------------------
 async function checkHealth(verbose = false) {
   try {
-    const res = await fetch(
-      `/api/health?backend=${encodeURIComponent(backend)}`
-    );
+    const res = await fetch("/api/health");
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.ok) {
       setStatus("ok");
-      if (verbose) setHealth(`OK: ${backend} に接続できました。`, true);
+      if (verbose) setHealth("OK: エージェントに接続できました。", true);
     } else {
       setStatus("bad");
       if (verbose)

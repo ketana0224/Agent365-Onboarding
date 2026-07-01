@@ -24,25 +24,12 @@
     </header>
 
     <section id="settings" class="settings settings--hidden">
-      <label class="settings__field">
-        <span>バックエンド URL（エージェントの基底 URL）</span>
-        <input
-          id="backendUrl"
-          type="text"
-          placeholder="http://localhost:8000"
-          autocomplete="off"
-          spellcheck="false"
-        />
-      </label>
       <p class="settings__hint">
-        ローカル起動なら <code>http://localhost:8000</code>、ACA なら
-        <code>https://&lt;app&gt;.azurecontainerapps.io</code> を指定します。
-        ブラウザの CORS を避けるため、リクエストは同一オリジンのプロキシ
-        (<code>serve.py</code>) 経由で <code>{backend}/chat</code> に中継されます。
+        エージェントへの接続はローカルのプロキシ (<code>serve.py</code>) が
+        中継します。接続先はサーバー側で設定されており、この画面には表示されません。
       </p>
       <div class="settings__actions">
         <button id="healthBtn" class="btn btn--ghost">疎通確認</button>
-        <button id="saveBtn" class="btn">保存</button>
       </div>
       <p id="healthResult" class="settings__health"></p>
     </section>

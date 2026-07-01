@@ -2,7 +2,7 @@
 
 > ハンズオン情報: https://purple-rock-08f9ce800.7.azurestaticapps.net/
 
-> 最終更新: 2026-06-29
+> 最終更新: 2026-07-01
 > 目的: ハンズオン全体の **用語・全体像** を共有し、**前提リソースが動く**ことを確認する。Agent 365 で統制する前の「素体エージェント」を **ローカル UI から 1 往復** させ、MCP を呼んで回答することを見届ける。
 > 親: [Handson 全体まとめ](../README.md)
 > 統制レベル: **なし（統制前）**。Agent ID も登録も無い「ただの ACA アプリ」を動かすだけの段。ここに ID／出口集約／キルスイッチ／可観測化を Lab1 以降で 1 段ずつ積む。
@@ -95,57 +95,90 @@
 | `app.js` | 送信・疎通確認・表示 |
 | `serve.py` | 静的配信 + CORS 回避プロキシ |
 
-> **なぜプロキシが必要か**: 素体エージェントには CORS 設定が無いため、ブラウザから直接 ACA の `/chat` を叩くと CORS でブロックされる。`serve.py` が同一オリジンで UI を配信し `POST /api/chat` を `{backend}/chat` にサーバー間中継するので、**エージェント側コードは無改変**で動く。
+> **なぜプロキシが必要か**: 素体エージェントには CORS 設定が無いため、ブラウザから直接 ACA の `/chat` を叩くと CORS でブロックされる。`serve.py` が同一オリジンで UI を配信し `POST /api/chat` を `{backend}/chat` にサーバー間中継するので、**エージェント側コードは無改変**で動く。接続先（ACAの URL）は `serve.py` 内に固定され、**ブラウザ・app.js には一切露出しない**。
 
 ---
 
-## 7. 疎通手順
+## 7. 前提ツール（Python / pip）
 
-### 7.1 プロキシ（UI）を起動
+`serve.py` は **Python 標準ライブラリのみ**で動く（UI 起動に追加パッケージは不要）が、ハンズオン全体（Lab2 以降のエージェントビルド・`a365` CLI など）で Python / pip を使う。仮想環境 `.venv` は **リポジトリ ルート**（`C:\GitHub\Agent365-Onboarding\.venv`）に作る。
+
+| ツール | 要件 |
+|---|---|
+| **Python** | 3.10 以上 |
+| **pip** | Python に同梱（`python -m pip`） |
 
 ```powershell
-cd local-chat-app
-python serve.py --backend https://custom-maf-agent.proudflower-d41f2cf1.eastus2.azurecontainerapps.io  # 稼働中の ACA 素体エージェントに疎通
-python serve.py --port 9000 --backend https://custom-maf-agent.proudflower-d41f2cf1.eastus2.azurecontainerapps.io  # ポート変更
+# リポジトリ ルートで実行
+cd C:\GitHub\Agent365-Onboarding
+python --version        # 3.10 以上であること
+python -m pip --version # pip が使えること
+
+# 仮想環境をルートに作成・有効化
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 ```
 
-- バックエンドは稼働中の ACA 素体エージェント `https://custom-maf-agent.proudflower-d41f2cf1.eastus2.azurecontainerapps.io`。ローカルでエージェントを起動する必要はない。
-- バックエンドは ⚙️ や環境変数 `LOCAL_CHAT_BACKEND` でも指定可。
+> ルートの `.venv` を一つだけ作り、各 Lab はこの同じ仮想環境を使い回す（Lab ごとに `.venv` を作らない）。
+
+---
+
+## 8. 疎通手順
+
+### 8.1 プロキシ（UI）を起動
+
+```powershell
+# ルートの .venv を有効化済みなら python で OK
+cd Handson\lab0\local-chat-app
+python serve.py            # 接続先は serve.py 内に固定、起動時にブラウザが自動で開く
+python serve.py --port 9000 # ポート変更
+python serve.py --no-open   # ブラウザを自動で開かない
+```
+
+- **接続先は `serve.py` 内に固定**されており、UI（ブラウザ）からは見えない・変更できない。ローカルでエージェントを起動する必要はない。
+- 別デプロイ環境に向ける場合のみ、`--backend`（または環境変数 `LOCAL_CHAT_BACKEND`）で上書きできる。
 
 <details>
 <summary>クリックして開く：FQDN を自分で取得する場合（別デプロイ環境向け）</summary>
 
 ```powershell
-az containerapp show -g <rg> -n custom-maf-agent --query properties.configuration.ingress.fqdn -o tsv
+az containerapp show -g <rg> -n custom-maf-agent-a365 --query properties.configuration.ingress.fqdn -o tsv
 ```
 
-取得した FQDN（`https://<app>.azurecontainerapps.io`）を `--backend` や ⚙️ に指定する。
+取得した FQDN（`https://<app>.azurecontainerapps.io`）を `serve.py --backend` に渡す。
 
 </details>
 
-### 7.2 ブラウザで開く
+### 8.2 ブラウザで開く
+
+`serve.py` 起動時に **自動でブラウザが開く**（開かない場合は手動で）。
 
 ```
 http://localhost:8080
 ```
 
-右上 ⚙️ でバックエンド URL を変更し「疎通確認」で接続を確認（緑=OK / 赤=エラー）。設定は localStorage に保存。送信は `Enter`、改行は `Shift+Enter`。
+右上 ⚙️ の「疎通確認」で接続を確認（緑=OK / 赤=エラー）。送信は `Enter`、改行は `Shift+Enter`。接続先 URL は表示されない（サーバー側固定）。
+
+> **注意**: `index.html` を `file://` で直接開いても動かない（プロキシが無く相対パス `/api/*` が解決できない）。必ず `serve.py` 経由で `http://localhost:8080` を開く。
 
 ---
 
-## 8. 成果物 / 検証
+## 9. 成果物 / 検証
 
 - 「**返品ポリシーを教えて**」と送ると、エージェントが MCP（`contoso-policy-mcp`）を呼んで回答する。
 - 応答 `{"agent","reply"}` の `reply` が表示され、`agent` 名がメタ表示される。
 - 出口（LLM/MCP）はすべて APIM 経由＝Foundry/MCP に直結しない。
 
-## 9. ⚠️ ハマりどころ
+## 10. ⚠️ ハマりどころ
 
 | 症状 | 原因 | 対処 |
 |---|---|---|
-| 疎通確認が赤・接続できない | バックエンド URL 誤り / ACA 停止 | A) `--backend` に ACA URL `https://custom-maf-agent.proudflower-d41f2cf1.eastus2.azurecontainerapps.io` を指定、B) ⚙️ のバックエンド URL を確認 |
+| `python` が見つからない | Python 未インストール / PATH 未通し | Python 3.10 以上をインストールし、`python --version` が通ることを確認 |
+| `file://` で開いて動かない | プロキシが無く相対パス `/api/*` が解決できない | `serve.py` を起動し `http://localhost:8080` で開く |
+| 疎通確認が赤・接続できない | プロキシ未起動 / ACA 停止 | `serve.py` が起動しているか、ACA が稼働中か確認 |
 | ブラウザから直叩きで CORS エラー | エージェントに CORS 無し | `serve.py` の `/api/chat` プロキシ経由で叩く（ACA を直叩きしない） |
-| 502 backend 接続不可 | バックエンド URL 誤り / ACA 未応答 | ⚙️ のバックエンド URL を ACA FQDN に一致させ、ACA が稼働中か確認 |
+| 502 backend 接続不可 | 固定バックエンドが未応答 | ACA が稼働中か確認（URL は `serve.py` 内に固定） |
 
 ---
 
