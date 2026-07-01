@@ -238,6 +238,9 @@ streamlit run app.py
 
 #### 方法 B: PowerShell スクリプト（test-obo-end-to-end）
 
+<details>
+<summary>参考：PowerShell スクリプトで OBO を検証する（クリックして開く）</summary>
+
 ```powershell
 cd ..\agent-custom-MAF-ACA-A365-obo\scripts
 pwsh .\test-obo-end-to-end.ps1 `
@@ -245,6 +248,8 @@ pwsh .\test-obo-end-to-end.ps1 `
   -ClientId <scripts/01 で作った Public Client appId>
 # MSAL.PS で対話サインイン → ユーザートークン取得 → POST /obo-chat
 ```
+
+</details>
 
 #### 確認: `/debug/auth` に Step 2b が出る
 
