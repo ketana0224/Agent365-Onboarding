@@ -185,13 +185,11 @@ pwsh -NoProfile -File ./verify-azure-resources.ps1
 
 ---
 
-## 7. 検証結果（実行後に追記）
+## 7. 検証結果
 
 | 項目 | 結果 |
 |---|---|
 | 実行体のデプロイ（§3） | ✅ デプロイ済み・`/chat` 疎通確認済み（`custom-maf-agent-a365.proudflower-d41f2cf1.eastus2.azurecontainerapps.io`） |
-| Setup / Agent ID の確認（§4） | （未） |
-| Publish（§5） | （未） |
+| Setup / Agent ID の確認（§4） | ✅ `a365 setup all` で Blueprint・Agent ID・Agent Registration を発行し、`a365.generated.config.json` の値を確認済み |
+| Publish（§5） | ✅ Blueprint ベースのため `a365 publish` は no-op（"Nothing to publish for blueprint-based agents"）。登録＝発行は §4 で完了済み |
 | インスタンス作成（§6） | 対象外（`/api/messages` 未実装で検証不能・Agent ID は §4 で発行済み） |
-
-> **ガバナンスの検証（CA / Purview / Defender、Lab1-1 との対比）** は本ラボの主旨（Agent ID 作成）と分けて、[lab4-1 Agent ID のガバナンス検証](../lab4/lab4-1_AgentIDガバナンス検証.md) に移動した。
