@@ -257,10 +257,10 @@ APIM 集約は Agent ID 化を実質的にかなり簡単にしている。
 
 出口を Agent ID に差し替えたことで、**M365 管理センター（admin.microsoft.com）> Agents > 対象エージェント > Block**（または Entra 管理センター > Agent identities > Disable）を押すだけで、このエージェントの LLM / MCP 出口を一括で遮断できる。Block すると Agent Identity の SP が `accountEnabled=false` になり、fmi_path のトークン交換が成立しなくなる。
 
-Block 後に改めて確認用の smoke test を実行すると、LLM / MCP がどちらも止まり `500` になる:
+Block 後に改めて確認用の smoke test を実行すると、LLM / MCP がどちらも止まり `500` になる（FQDN は `.env` から自動解決されるので §3 と同じ `smoke.ps1` をそのまま使える）:
 
 ```text
-PS> python smoke_test.py https://custom-maf-a365-egress-user99.salmonmeadow-9e9460b3.eastus2.azurecontainerapps.io
+pwsh .\smoke.ps1
 BASE: https://custom-maf-a365-egress-user99.salmonmeadow-9e9460b3.eastus2.azurecontainerapps.io
 HEALTH: ok
 
