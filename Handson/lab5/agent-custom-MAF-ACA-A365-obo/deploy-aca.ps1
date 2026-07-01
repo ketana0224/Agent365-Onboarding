@@ -285,8 +285,13 @@ Write-Host "Health     : $baseUrl/healthz"
 Write-Host "出口モード  : USE_AGENT_ID_EGRESS=$useAgentIdEgress / OBO aud=$blueprintApiAudience" -ForegroundColor Green
 Write-Host ''
 Write-Host 'スモークテスト:' -ForegroundColor Cyan
-Write-Host "  python smoke_test.py $baseUrl                 # /chat（自律型）"
-Write-Host "  pwsh .\scripts\test-obo-end-to-end.ps1 -BaseUrl $baseUrl   # /obo-chat（OBO）"
-Write-Host '  またはブラウザ UI: ..\chat-ui-obo\app.py（Streamlit）'
+Write-Host "  python smoke_test.py $baseUrl                 # /chat（自律型 Step 2a）"
+Write-Host ''
+Write-Host 'OBO（/obo-chat, Step 2b）は先に scripts\01〜03 を実行してから、次のいずれか:' -ForegroundColor Cyan
+Write-Host '  方法A（Streamlit UI）:'
+Write-Host '    cd scripts; pwsh .\04_generate-chat-ui-env.ps1 -DisplayName "contoso-obo-chat-ui-userNN"'
+Write-Host '    cd ..\..\chat-ui-obo; streamlit run app.py'
+Write-Host '  方法B（スクリプト）:'
+Write-Host "    pwsh .\scripts\test-obo-end-to-end.ps1 -BaseUrl $baseUrl -ClientId <scripts\01 の Public Client appId>"
 Write-Host ''
 Write-Host '注: ロール伝播に数分かかる場合があります。初回 /chat が 401/403 の場合は少し待って再試行してください。' -ForegroundColor DarkGray

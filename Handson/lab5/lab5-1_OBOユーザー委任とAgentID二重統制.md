@@ -221,15 +221,15 @@ python smoke_test.py https://<your-app-fqdn>
 ```powershell
 # 1) .env を自動生成（scripts フォルダーで実行）
 #    AAD_CLIENT_ID / BLUEPRINT_APP_ID / AGENT_BASE_URL / AZURE_TENANT_ID を自動解決して書き出す
-cd Handson\lab5\agent-custom-MAF-ACA-A365-obo\scripts
+cd C:\Agent365-Onboarding\Handson\lab5\agent-custom-MAF-ACA-A365-obo\scripts
 $me = "userNN"   # 0 節で使ったのと同じ番号（例 user01）
 pwsh .\04_generate-chat-ui-env.ps1 -DisplayName "contoso-obo-chat-ui-$me"
 #   AGENT_BASE_URL を明示したい場合（ACA が複数 / 未検出のとき）:
 #   pwsh .\04_generate-chat-ui-env.ps1 -DisplayName "contoso-obo-chat-ui-$me" -AgentBaseUrl https://custom-maf-a365-obo-userNN.<region>.azurecontainerapps.io
 
-# 2) chat-ui-obo を起動
+# 2) chat-ui-obo を起動（リポジトリ root の .venv を共有利用）
 cd ..\..\chat-ui-obo   # Handson\lab5\chat-ui-obo
-python -m venv .venv; .\.venv\Scripts\Activate.ps1
+C:\Agent365-Onboarding\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 streamlit run app.py
 ```
