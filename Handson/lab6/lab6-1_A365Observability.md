@@ -157,6 +157,17 @@ pwsh .\deploy-aca.ps1
 
 その後、[chat-ui-obo](../lab5/chat-ui-obo/README.md)（lab5 と同じ OBO 用 UI）で **1〜2 往復**会話し、`invoke_agent`（ルート）/ `chat` / `execute_tool` のスパン ツリーを発生させる。lab6 は OBO 版なので会話の入口は `/obo-chat`（`Authorization: Bearer <user_token>` 必須）。`local-chat-app` はユーザートークンを載せないため OBO の往復にはならない。
 
+```powershell
+# chat-ui-obo（Streamlit）を起動するだけの一括手順
+cd C:\Agent365-Onboarding\Handson\lab5\chat-ui-obo
+if (-not (Test-Path .\.venv)) { python -m venv .venv }
+.\.venv\Scripts\Activate.ps1
+pip install -q -r requirements.txt
+if (-not (Test-Path .\.env)) { Copy-Item .env.example .env }
+# .env を編集（AAD_CLIENT_ID / BLUEPRINT_APP_ID / AGENT_BASE_URL を lab6 obs エージェントの URL に）
+streamlit run app.py
+```
+
 ---
 
 ## 4. 検証｜計装したトレースをどこで見るか
