@@ -52,15 +52,18 @@
 
 > この時点で「発行」は完了している。**ただし発行＝サインインではない**。実際に Agent Identity が Entra にサインインするのは ③（実行時の認証）で初めて起こる。
 
-### ② 結合（実行時の fmi_path トークン交換コード）
+### ② 結合（実行時の fmi_path トークン交換コード）※本ラボでは未配線／[lab3](../lab3/lab3-1_出口1点集約とAgentID差し替え.md) で実装
 
-**実行時の fmi_path トークン交換コード（Step1→Step2 の 2 段階交換）は、発行とは別物。** **本サンプルのように自由に作ったエージェントでは、このトークン交換は自分で実装する必要がある**（§7.2 の [trigger-agentid-signin.ps1](agent-custom-MAF-ACA-A365/trigger-agentid-signin.ps1) が、まさにその手書きのトークン交換コードに相当する）。
+**実行時の fmi_path トークン交換コード（Step1→Step2 の 2 段階交換）は、発行とは別物。** **本サンプルのように自由に作ったエージェントでは、このトークン交換は自分で実装する必要がある**。ただし **lab2 のアプリ本体（`app/`）にはこの交換は組み込んでいない**（出口は Foundry=MI／MCP=API キーのまま）。実アプリの出口を Agent ID トークンに差し替える配線は lab3 で行う。lab2 では下記の交換を検証スクリプトで 1 回だけ再現する（③）。
+
+- **Step1（親トークン取得）**: Blueprint（親アプリ）の appId + クライアント シークレットで、`fmi_path=<Agent Identity の appId>` と `scope=api://AzureADTokenExchange/.default` を指定して `client_credentials` で親トークンを取得する。
+- **Step2（子トークン取得）**: `client_id=<Agent Identity の appId>`、`client_assertion=<Step1 の親トークン>`、`client_assertion_type=…jwt-bearer` で、目的リソースのスコープ（例: Graph の `.default`）に対してトークンを取得する。**この Step2 のトークン発行が「Agent ID のサインイン」として記録され、CA 評価の対象になる。**
 
 ### ③ 認証（実行時に Agent ID としてサインインさせる処理）
 
-**「実行体を Agent ID として Entra にサインインさせる」処理（＝実行時の Agent ID 認証）は、`a365 setup` が生成したシークレット/MI を使う fmi_path のトークン交換で行う。** 本サンプルはこれを自前実装しており、§3 でデプロイする ACA アプリは**通常動作では Agent ID として認証しない**（Foundry へは MI、MCP へは API キーで動いており、Agent ID は経由しない）。
+§3 でデプロイする ACA アプリは**通常動作では Agent ID として認証しない**（Foundry へは MI、MCP へは API キーで動いており、Agent ID は経由しない）。つまり lab2 では②の交換はアプリの通常フローには乗っていない。
 
-したがって**このラボで Agent ID（SP `9ff24e53…`）が実際にサインインするのは §7.2 の検証スクリプト [trigger-agentid-signin.ps1](agent-custom-MAF-ACA-A365/trigger-agentid-signin.ps1) を実行したときだけ**。その fmi_path 交換を**手で 1 回だけ再現**して Agent ID をサインインさせ、その Agent ID に CA ブロックが効くこと（統制）を実証する。
+そこで **§7.2 で検証スクリプト [trigger-agentid-signin.ps1](agent-custom-MAF-ACA-A365/trigger-agentid-signin.ps1) を実行**して Agent ID をわざと 1 回サインインさせ、その Agent ID に CA ブロックが効くこと（統制）を確かめる。
 
 > 進行順: **§3（実行体デプロイ）→ §4（`a365 setup all` で Agent ID 発行）→ §7（§7.2 で Agent ID をサインインさせて統制検証）**。
 
@@ -68,14 +71,14 @@
 
 ## 1. 対象エージェント
 
-> **これから作るもの。** Blueprint・Agent ID（Instance SP）・Agent Registration は **§4 の `a365 setup all --agent-name custom-maf-agent-a365` で発行する**。下表の GUID は「発行済みの前提値」ではなく、**§4 を実行すると生成される値の例（本ラボの実測値）**。自分のテナントで実行すると別の GUID になるので、§4.3 の検証で `a365.generated.config.json` の実値に読み替える。
+> **これから作るもの。** Blueprint・Agent ID（Instance SP）・Agent Registration は **§4 の `a365 setup all --agent-name custom-maf-agent-a365` で発行する**。実 GUID は自分のテナントで実行すると生成されるので、§4.3 の検証で `a365.generated.config.json` の実値を確認する。
 
-| 項目 | 値（§4 実行後の実測例） |
+| 項目 | 内容 |
 |---|---|
 | 登録名 | `custom-maf-agent-a365`（`--agent-name` で指定する名前） |
-| Blueprint appId | `e65ce763-b70a-4991-854c-788c2862fb08` |
-| Instance SP（agenticAppId） | `9ff24e53-7789-41f2-9039-c19257f8f852`（表示名 `custom-maf-agent-a365 Identity`・ServiceIdentity SP・**directory user ではない**） |
-| Agent Registration | `T_a1c916c0-53bb-e435-f167-d318842f0094`（`custom-maf-agent-a365 Agent`） |
+| Blueprint | シークレットを保持する親アプリ登録 + SP（manager） |
+| Instance SP（agenticAppId） | Agent Identity 本体。表示名 `custom-maf-agent-a365 Identity`・ServiceIdentity SP・**directory user ではない**。§7 の統制対象 |
+| Agent Registration | Agent 365 レジストリ上の登録（`custom-maf-agent-a365 Agent`） |
 | `aiTeammate` | `false`（Blueprint ベース・専用ユーザーは持たない） |
 | 発行方法 | §4 の `a365 setup all --agent-name custom-maf-agent-a365`（Blueprint＋Agent ID を一括発行） |
 

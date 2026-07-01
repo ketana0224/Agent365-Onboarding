@@ -48,7 +48,7 @@ flowchart LR
 > **`.env` は `.gitignore` 済みなので、[new-env.ps1](agent-custom-MAF-ACA-A365/new-env.ps1) で生成する**。共有基盤値はスクリプト内に埋め込み済みで、`-Me` に自分の識別子を渡すだけで ACA 値が `-userNN` 化された `.env` ができる（冪等）。
 >
 > ```powershell
-> cd Handson/lab2/agent-custom-MAF-ACA-A365
+> cd C:\Agent365-Onboarding\Handson\lab2\agent-custom-MAF-ACA-A365
 > ./new-env.ps1 -Me userNN        # userNN は自分の番号に置き換える（例 user01）。§3 の前に実行
 > ```
 >
