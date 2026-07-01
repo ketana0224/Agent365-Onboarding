@@ -7,14 +7,10 @@
 > - [lab2-2｜ACA カスタム エージェントのデプロイ](lab2-2_ACAカスタムエージェントデプロイ.md)（§3）
 > - [lab2-3｜Agent ID 作成](lab2-3_AgentID作成.md)（§4–§7。ガバナンス検証は lab4 に分離）
 
-> 親: [Lab1 全体まとめ](README.md)
-> 統制レベル: **中**。Blueprint 由来の Microsoft Entra Agent ID（SP）を主体に、CA / Purview / Defender / Entra governance が自動適用される。
-> 一次情報: [Get started](https://learn.microsoft.com/microsoft-agent-365/developer/get-started) / [capabilities-entra](https://learn.microsoft.com/microsoft-agent-365/admin/capabilities-entra)
-
 > 前提：Agent 365 が統制するのは「身分証（Agent ID）」であって「実行体（ランタイム）そのもの」ではない。
 > - 本ラボのような自作エージェント（ACA コンテナ）では、Agent 365/Entra が触れるのは Agent ID（SP）だけ。CA でできるのは「Agent ID としてのリソース アクセスを Block」することで、実行体（ランタイム＝コンテナのプロセス）を止めることはできない（プロセスは生き続ける）。実行そのものの停止は APIMやACA 側の操作の役割。
-> - また自作の場合、ランタイムを Agent ID として Entra 認証させる処理（`a365 setup` が発行した Blueprint シークレット/MI を使う fmi_path のトークン交換）は、**本サンプルではアプリ側で自前実装する**（実際の出口差し替えは [lab3-1](../lab3/lab3-1_出口1点集約とAgentID差し替え.md) の `_egress_token()` → `AgentIdCredential` で行う）。これで同じ fmi_path 経路を再現でき、Agent ID のサインイン／CA ブロックを検証できる（§7.2）。一方 Foundry へは MI、MCP へは API キーといった Agent ID 非経由の経路は CA 統制の対象外（**ただし lab3-1 で出口を Agent ID トークンに差し替えれば CA 統制の対象になる**）。
-> - 一方ホスト型（Copilot Studio / Foundry Agent Service）は Microsoft が身分証と実行ランタイムの両方を管理プレーン下に持ち、Agent 365 に自動登録されるため、本ラボのような明示的な Agent ID 発行（`a365 setup all`）は不要で、管理者の無効化が実行停止（実質キルスイッチ）まで効く。「ID＋実行を一体で統制したい／キルスイッチが欲しい」ならホスト型、「自前の基盤で柔軟に」なら自作＋Agent ID（実行停止は ACA で自分で担保）というトレードオフ。
+> - また自作の場合、ランタイムを Agent ID として Entra 認証させる処理は、**本サンプルではアプリ側で自前実装する**（実際の出口差し替えは [lab3-1](../lab3/lab3-1_出口1点集約とAgentID差し替え.md) で行う）。これで Agent ID のサインイン／CA ブロックを検証できる（§7.2）。
+> - 一方ホスト型（Copilot Studio / Foundry Agent Service）は Microsoft が身分証と実行ランタイムの両方を管理プレーン下に持ち、Agent 365 に自動登録されるため、本ラボのような明示的な Agent ID 発行（`a365 setup all`）は不要で、管理者の無効化が実行停止（実質キルスイッチ）まで効く。「ID＋実行を一体で統制したい／キルスイッチが欲しい」ならホスト型、「自前の基盤で柔軟に」なら自作＋Agent ID というトレードオフ。
 
 ---
 
