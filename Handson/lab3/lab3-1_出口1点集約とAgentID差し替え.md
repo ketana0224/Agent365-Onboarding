@@ -18,7 +18,7 @@ Lab2 の時点で、エージェントの外向き通信（LLM / MCP、いずれ
 
 ## 差し替えの単一点（コードの実体）
 
-本ラボの実行体は egress 版（[`agent-custom-MAF-ACA-A365-egress`](agent-custom-MAF-ACA-A365-egress/)）。Lab2 のエージェントと **同一指示・同一 MCP ツール・同一モデル・APIM 経由**で、差分は **出口トークンの取得を `_egress_token()` に集約した点だけ**。
+本ラボの実行体は egress 版（[`agent-custom-MAF-ACA-A365-egress`](agent-custom-MAF-ACA-A365-egress/)）。Lab2 のエージェントと **同一指示・同一 MCP ツール・同一モデル・APIM 経由**。差分は、出口トークンの取得を **`_egress_token()` に一点集約**し、`USE_AGENT_ID_EGRESS` フラグで **マネージド ID ↔ Agent ID（fmi_path 2 ステップ交換）** を切り替えられるようにした点。この切り替えのため egress 版には Lab2 版に無い実装が追加されている（fmi_path 本体 [`app/agent_id_token.py`（仕様説明書）](agent_id_token_仕様説明書.md)、その設定 getter を持つ `app/config.py`、`agent.py` の `USE_AGENT_ID_EGRESS` 分岐 + `AgentIdCredential` 差し替え）。
 
 ```python
 # app/config.py
