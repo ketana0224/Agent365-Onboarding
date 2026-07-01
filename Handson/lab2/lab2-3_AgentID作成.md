@@ -47,7 +47,7 @@ az account show
 > **受講者は 12 人（user01〜user12）。エージェント名はテナント内で一意である必要がある**ため、`--agent-name` に**自分の受講者識別子をサフィックス**として付ける（例: `custom-maf-agent-a365-user01`）。これで Blueprint 登録・Agent Identity・Azure リソース名が受講者ごとに衝突しない。以降の手順に出てくる `custom-maf-agent-a365` も、自分のサフィックス付き名（`custom-maf-agent-a365-userNN`）に読み替えること。
 
 ```powershell
-cd C:\GitHub\Agent365-Onboarding\Handson\lab2
+cd C:\Agent365-Onboarding\Handson\lab2
 
 # 受講者識別子（user01〜user12 のうち自分のもの）をここで指定
 $me = "user01"   # ← 自分の番号に変更（user01〜user12）
@@ -79,7 +79,7 @@ a365 setup all --agent-name "custom-maf-agent-a365-$me"
 **(1) 生成 config を確認**（`a365.generated.config.json` のこと。**シークレットはチャット/ログに貼らない**）。§4.2 と同じ lab2 フォルダーで実行する:
 
 ```powershell
-cd C:\GitHub\Agent365-Onboarding\Handson\lab2
+cd C:\Agent365-Onboarding\Handson\lab2
 Get-Content a365.generated.config.json | ConvertFrom-Json | Format-List `
   agentBlueprintId, agentBlueprintServicePrincipalObjectId, agenticAppId, `
   agentRegistrationId, managedIdentityPrincipalId, messagingEndpoint, completed
