@@ -43,6 +43,7 @@ flowchart LR
 | Lab4 | [(任意) Conditional Access でエージェントを条件付き制御](Handson/lab4/lab4-1_AgentIDガバナンス検証.md) | Agent ID を CA で条件付きブロック／ガバナンス検証 | 50 分 |
 | Lab5 | [OBO で二重統制](Handson/lab5/lab5-1_OBOユーザー委任とAgentID二重統制.md) | ユーザー本人の権限で Graph、二重統制 | 40 分 |
 | Lab6 | [A365 Observability](Handson/lab6/lab6-1_A365Observability.md) | per-span な行動を管理センターへ可観測化 | 40 分 |
+| 番外 | [Databricks へトレース出力（Zerobus OTLP）](Handson/lab99/lab99-1_Databricks_Zerobus_Observability.md) | lab6 の計装のまま、同じ traces / logs / metrics を Azure Databricks（Unity Catalog Delta）へ追加の宛先として送る | 30 分 |
 
 ---
 

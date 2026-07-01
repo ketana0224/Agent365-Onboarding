@@ -294,7 +294,16 @@ union dependencies, requests, traces
 
 ---
 
-## 5. よくある失敗
+## 5. 番外｜Databricks へトレース出力（Zerobus OTLP）
+
+同じテレメトリを **Azure Databricks（Unity Catalog Delta）** へ **Zerobus OTLP エンドポイント**で**追加の宛先**として送り、長期保管・任意 SQL / ノートブック分析の「分析プレーン」を足す（任意トラック）。
+
+- **lab6 の計装（`use_microsoft_opentelemetry()`）はそのまま**。env 変数（＋任意で OTel Collector サイドカー）を足すだけで、**A365 / App Insights の既存宛先は残る**。
+- 手順の詳細: [lab99-1｜Databricks へトレース出力（Zerobus OTLP）](../lab99/lab99-1_Databricks_Zerobus_Observability.md)
+
+---
+
+## 6. よくある失敗
 
 | 症状 | 原因 | 対処 |
 |---|---|---|
@@ -310,7 +319,7 @@ union dependencies, requests, traces
 
 ---
 
-## 6. このラボの結論
+## 7. このラボの結論
 
 - **Microsoft OpenTelemetry Distro で A365 計装＝1 点、宛先は 2 つ**（運用＝Azure Monitor／統制＝Defender）。
 - 自前ホストゆえの変化点は **3 つ**（① Distro 初期化 ② token resolver ③ 静的スタンプ）。②③ はホスティング ランタイムが居れば自動。
@@ -320,7 +329,7 @@ union dependencies, requests, traces
 
 ---
 
-## 7. 出典（Microsoft Learn）
+## 8. 出典（Microsoft Learn）
 
 - Microsoft OpenTelemetry Distro（推奨パス）: <https://learn.microsoft.com/microsoft-agent-365/developer/microsoft-opentelemetry>
 - Observability concepts（データモデル / drop 条件 / 格納先）: <https://learn.microsoft.com/microsoft-agent-365/developer/observability-concepts>
