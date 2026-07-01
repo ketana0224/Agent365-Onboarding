@@ -26,10 +26,11 @@ a365.generated.config.backup-*.json
 **/.env
 !**/.env.example
 
-# lab credentials (TAP codes / user info) - never commit
+# lab credentials (TAP codes) - never commit
 **/tap-results.json
-user_info.zip
 *.zip
+# user_info.zip is encrypted, allow it
+!user_info.zip
 
 # work-in-progress labs
 Handson/lab7/
