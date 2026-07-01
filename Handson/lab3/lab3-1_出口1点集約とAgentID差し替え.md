@@ -183,9 +183,22 @@ pwsh .\deploy-aca.ps1
 
 ### 3. Agent ID 出口で動くことを確認する
 
+FQDN は受講者ごと・デプロイごとに変わるため手打ちしない。`smoke.ps1` が `.env`（`ACA_APP_NAME` / `ACA_RESOURCE_GROUP`）から `az` で URL を自動解決してスモークテストを実行する。
+
+```powershell
+pwsh .\smoke.ps1
+# .env と別アプリを叩く場合のみ明示指定:
+# pwsh .\smoke.ps1 -AppName custom-maf-a365-egress-userNN -ResourceGroup rg-userNN
+```
+
+<details>
+<summary>参考情報（クリックして開く）｜URL を手打ちして直接叩く場合</summary>
+
 ```powershell
 python smoke_test.py https://<your-app-fqdn>
 ```
+
+</details>
 
 - `POST /chat` … `{"message":"返品ポリシーを教えて"}` → MCP ツールを呼んでポリシーに沿った回答が返る
 - `GET /debug/auth` … `use_agent_id_egress=true`、Agent ID 出口で動作（`step2a_autonomous_token`＝fmi_path 2 ステップ目の交換が記録される）
