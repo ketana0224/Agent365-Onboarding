@@ -125,7 +125,7 @@ token = await _get_agent_id_provider().get_obo_token(
 > `Blueprint` / `Agent Identity` の appId は lab2 の `a365.generated.config.json`（**自分が `a365 setup all` を実行して生成したもの**）から **自動解決**される（`-BlueprintAppId` 等は通常不要）。ただし `02` の **`-ClientAppId` だけは自動解決できない**ため、`01` の出力 appId を手で渡す。各操作には**自分の Blueprint / Agent Identity に対する管理者同意**が必要（同意 URL を Global Administrator に共有する運用は lab2-3 と同じ）。
 
 ```powershell
-cd C:\GitHub\Agent365-Onboarding\Handson\lab5\agent-custom-MAF-ACA-A365-obo\scripts
+cd C:\Agent365-Onboarding\Handson\lab5\agent-custom-MAF-ACA-A365-obo\scripts
 $me = "userNN"   # 自分の番号に置き換える（例 user01）
 
 # 1) OBO チャット UI 用の Public Client アプリを登録（contoso-obo-chat-ui-userNN）
@@ -133,8 +133,8 @@ pwsh .\01_register-obo-client-app.ps1 -DisplayName "contoso-obo-chat-ui-$me"
 #   → 出力の "Client App ID : <GUID>" を控える（02 / chat-ui-obo / test-obo-end-to-end で使う）
 
 # 2) Blueprint アプリを OAuth API 化（api://{blueprint} / scope=access_as_user / preAuthorize）
-#    01 の Client App ID を -ClientAppId で渡す（必須・自動解決されない）
-pwsh .\02_patch-blueprint-as-oauth-api.ps1 -ClientAppId <01で控えたGUID>
+#    01 の出力に表示される次コマンドをそのまま実行（-BlueprintAppId と -ClientAppId を渡す）
+pwsh .\02_patch-blueprint-as-oauth-api.ps1 -BlueprintAppId <BlueprintのGUID> -ClientAppId <01で控えたGUID>
 
 # 3) 02 で access_as_user スコープが確定したので 01 を再実行し、
 #    クライアント側の requiredResourceAccess（access_as_user 要求）を配線する
@@ -159,12 +159,15 @@ pwsh .\03_grant-agentid-graph-delegated.ps1
 > **受講者は 12 人（user01〜user12）**。`-Me userNN` で自分の識別子を渡すと、ACA 名を `-userNN` 化した `.env` を生成する（`ACA_RESOURCE_GROUP=rg-userNN` / `ACA_APP_NAME=custom-maf-a365-obo-userNN` / `ACA_ENV_NAME=aca-contoso-agent-userNN`）。app 名は ACA の 32 文字制限に収めるため `agent` を省いている。`rg-userNN` ・`aca-contoso-agent-userNN` は lab2 と同じものを再利用し、OBO 版は app 名で区別されるので受講者間で衝突しない。
 
 ```powershell
-cd C:\GitHub\Agent365-Onboarding\Handson\lab5\agent-custom-MAF-ACA-A365-obo
+cd C:\Agent365-Onboarding\Handson\lab5\agent-custom-MAF-ACA-A365-obo
 pwsh .\prepare-env.ps1 -Me userNN   # userNN は自分の番号に置き換える（例 user01）
 # 既存 .env を上書きする場合は -Force
 ```
 
 > Blueprint シークレットの復号は **lab2 で `a365 setup all` を実行したのと同一 Windows ユーザー**でのみ成功する。別ユーザー/別マシンでは `BLUEPRINT_CLIENT_SECRET` が空になるので、その値だけ手で補う。
+
+<details>
+<summary>参考：<code>prepare-env.ps1</code> が生成する <code>.env</code> の内容（クリックして開く）</summary>
 
 ```ini
 # prepare-env.ps1 が自動で入れる値（確認用）
@@ -186,6 +189,8 @@ BLUEPRINT_CLIENT_SECRET=<DPAPI 復号した Blueprint シークレット>
 BLUEPRINT_API_AUDIENCE=api://<lab2 の Blueprint appId>   # ユーザートークンの aud 検証に使う（検証側は api:// 形式と GUID 形式の両方を受理。requestedAccessTokenVersion=2 のため実際の aud は GUID）
 GRAPH_SCOPE=https://graph.microsoft.com/.default          # OBO で取る Graph トークンの scope
 ```
+
+</details>
 
 ### 2. OBO 版エージェントをデプロイする
 
