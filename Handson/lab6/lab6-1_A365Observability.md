@@ -141,6 +141,7 @@ lab6 は **lab5 の変化点**なので、Agent ID 等の発行（`scripts\01〜
 
 ```powershell
 # このフォルダ（agent-custom-MAF-ACA-A365-obo-obs）で実行。
+cd C:\Agent365-Onboarding\Handson\lab6\agent-custom-MAF-ACA-A365-obo-obs
 # (1) lab6 用 .env を自動生成（lab5 の .env をベースに観測ペアを追記）
 pwsh .\scripts\00_generate-env.ps1
 #     別ペアに OtelWrite を付与した場合のみ:
@@ -154,7 +155,7 @@ pwsh .\deploy-aca.ps1
 
 > **スパン用 ID は自動生成**。`00_generate-env.ps1` は引数未指定なら egress 用 `BLUEPRINT_APP_ID` / `AGENT_IDENTITY_APP_ID` / `BLUEPRINT_CLIENT_SECRET` を観測ペアに流用する（OtelWrite を同ペアに付与済みの想定）。OtelWrite を **別ペア**に付与した場合だけ `-ObsBlueprintId/-ObsAgentId/-ObsBlueprintSecret` で上書きする。
 
-その後、[chat-ui-obo](../lab5/chat-ui-obo/)（lab5 と同じ OBO 用 UI）で **1〜2 往復**会話し、`invoke_agent`（ルート）/ `chat` / `execute_tool` のスパン ツリーを発生させる。lab6 は OBO 版なので会話の入口は `/obo-chat`（`Authorization: Bearer <user_token>` 必須）。`local-chat-app` はユーザートークンを載せないため OBO の往復にはならない。
+その後、[chat-ui-obo](../lab5/chat-ui-obo/README.md)（lab5 と同じ OBO 用 UI）で **1〜2 往復**会話し、`invoke_agent`（ルート）/ `chat` / `execute_tool` のスパン ツリーを発生させる。lab6 は OBO 版なので会話の入口は `/obo-chat`（`Authorization: Bearer <user_token>` 必須）。`local-chat-app` はユーザートークンを載せないため OBO の往復にはならない。
 
 ---
 
