@@ -59,7 +59,7 @@ flowchart LR
 エージェント フォルダ **の中** から実行する（スクリプトはこのフォルダを基準に動く）。
 
 ```powershell
-cd _report/Handson/lab2/agent-custom-MAF-ACA-A365
+cd C:\Agent365-Onboarding\Handson\lab2\agent-custom-MAF-ACA-A365
 pwsh -NoProfile -File ./deploy-aca.ps1
 ```
 
