@@ -240,16 +240,7 @@ AgentsInfo
 
 > **このテナントでは CloudAppEvents が未プロビジョニングのため §4.2 は到達しない**(ライセンス/コネクタ/Security for AI 充足でも Advanced Hunting スキーマに CloudAppEvents 不在)。そこで **App Insights を本検証に使う**: 同一 Distro が A365 と App Insights の **2宛先へファンアウト**するので、App Insights にスパン ツリーが出れば「計装が動き export している」ことが GUI で確定する。
 
-lab6 は既定で App Insights を**自動作成しない**が、obs 用 `.env` で `APPLICATIONINSIGHTS_CONNECTION_STRING=` が空のまま `deploy-aca.ps1` を実行すると、**受講者の RG に `appi-<RG>` を自動作成**して接続文字列を渡す（`APPLICATIONINSIGHTS_NAME=` を指定すればその名前で作成）。手動で先に作る場合は以下:
-
-```powershell
-# 受講者ごと: 既存 LA ワークスペースに紐づくワークスペース ベース App Insights を作成
-$rg="rg-userNN"; $loc="eastus2"; $ws="workspace-rguserNNTdFM"
-$wsId = az monitor log-analytics workspace show -g $rg -n $ws --query id -o tsv
-az monitor app-insights component create -g $rg -a "appi-$rg" -l $loc --workspace $wsId --query connectionString -o tsv
-```
-
-接続文字列を `agent-custom-MAF-ACA-A365-obo-obs/.env` の `APPLICATIONINSIGHTS_CONNECTION_STRING=` に貼り、`APPLICATIONINSIGHTS_NAME=appi-rg-userNN` を設定→`deploy-aca.ps1` 再実行で起動ログが `AppInsights=on` になる。
+lab6 のエージェントは APIM と**同一の共有 App Insights**へテレメトリを集約する（E2E を 1 トランザクションで追うため）。`scripts\00_generate-env.ps1` がこの共有 App Insights の接続文字列を自動解決して `.env` の `APPLICATIONINSIGHTS_CONNECTION_STRING=` に焼き込み、`deploy-aca.ps1` はこの接続文字列を**必須**とする（受講者ごとの個別 App Insights 自動作成は分断を招くため廃止済み）。したがって受講者は App Insights を手動作成する必要はない。
 
 ```kusto
 union dependencies, requests, traces
