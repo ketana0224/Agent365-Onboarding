@@ -63,6 +63,16 @@ cd C:\Agent365-Onboarding\Handson\lab2\agent-custom-MAF-ACA-A365
 pwsh -NoProfile -File ./deploy-aca.ps1
 ```
 
+> **トラブルシュート: `az acr build` で `AADSTS130507: An access pass could not be found or verified ... Status_InteractionRequired` が出る場合**
+> az のトークンがサイレント更新できない状態（CAE チャレンジ、または TAP／アクセス パス経由サインインの失効）。**対話で入り直す**と解消する。az CLI が案内するとおり以下を実行してから `deploy-aca.ps1` を再実行する:
+>
+> ```powershell
+> az logout
+> az login --tenant "655bd66a-5001-4cb3-9aad-ce54a27d5d95" --scope "https://management.core.windows.net//.default"
+> ```
+>
+> ブラウザでアカウントを選び直す（キャンセルすると `Status_UserCanceled` で失敗する）。ログイン後に §3.2 の `deploy-aca.ps1` をもう一度実行する（`az acr build` は冪等）。
+
 `deploy-aca.ps1` が行うこと:
 
 1. `az acr build` で `Dockerfile`（`python:3.11-slim` + uvicorn）をクラウドビルドし、ACR にイメージを push。

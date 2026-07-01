@@ -32,6 +32,8 @@ param(
     [string]$AppName,
     [string]$EnvName,
     [string]$FoundryResourceGroup,
+    [string]$AcrName,
+    [string]$AcrResourceGroup,
     [string]$AiRole = 'Azure AI Developer',
     [switch]$SkipRbac
 )
@@ -117,16 +119,29 @@ if ($appInsightsConn) { $envVars += "APPLICATIONINSIGHTS_CONNECTION_STRING=$appI
 if ($mcpUrl)          { $envVars += "CONTOSO_MCP_URL=$mcpUrl" }
 if ($mcpKey)          { $envVars += "CONTOSO_MCP_KEY=$mcpKey" }
 
-# ACR 名（RG 内に無ければ作成）。英数字のみ・グローバル一意にするため suffix を付与。
-$acrName = ($envMap['ACA_ACR_NAME'])
-if (-not $acrName) {
-    $suffix  = -join ((97..122) + (48..57) | Get-Random -Count 6 | ForEach-Object { [char]$_ })
-    $acrName = "acaagent$suffix"
+# ACR は「その RG で共有する 1 つ」に集約する（冪等）。RG 内に既存があれば再利用、無ければ 1 つ作る。
+if (-not $AcrResourceGroup) { $AcrResourceGroup = if ($envMap['ACA_ACR_RESOURCE_GROUP']) { $envMap['ACA_ACR_RESOURCE_GROUP'] } else { $ResourceGroup } }
+if (-not $AcrName)          { $AcrName          = $envMap['ACA_ACR_NAME'] }
+# 明示名が無ければ、まず RG 内の既存 ACR を再利用（RG 単位で 1 つ）
+if (-not $AcrName) {
+    $AcrName = az acr list -g $AcrResourceGroup --query "[0].name" -o tsv 2>$null
 }
-$existingAcr = az acr show -n $acrName -g $ResourceGroup --query name -o tsv 2>$null
-if (-not $existingAcr) {
-    Write-Host "      ACR を作成: $acrName" -ForegroundColor DarkGray
-    az acr create -n $acrName -g $ResourceGroup --sku Basic --admin-enabled true --only-show-errors | Out-Null
+# それでも無ければ、RG 名から決定的に導出（毎回同一・グローバル一意）
+if (-not $AcrName) {
+    $sha    = [System.Security.Cryptography.SHA256]::Create()
+    $bytes  = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$SubscriptionId/$AcrResourceGroup"))
+    $hash   = ([System.BitConverter]::ToString($bytes)).Replace('-', '').ToLower()
+    $AcrName = "acaagent$($hash.Substring(0,10))"
+}
+$acrName = $AcrName
+$existingAcr = az acr show -n $acrName -g $AcrResourceGroup --query name -o tsv 2>$null
+if ($existingAcr) {
+    Write-Host "      ACR を再利用: $acrName (RG: $AcrResourceGroup)" -ForegroundColor DarkGray
+}
+else {
+    az group create -n $AcrResourceGroup -l $Location --only-show-errors | Out-Null
+    Write-Host "      ACR を作成: $acrName (RG: $AcrResourceGroup)" -ForegroundColor DarkGray
+    az acr create -n $acrName -g $AcrResourceGroup --sku Basic --admin-enabled true --only-show-errors | Out-Null
 }
 $image = "$acrName.azurecr.io/$($AppName):latest"
 
