@@ -147,14 +147,21 @@ if ($agentIdAppId)   { $envVars += "AGENT_IDENTITY_APP_ID=$agentIdAppId" }
 # Blueprint シークレットは ACA シークレット（secretref）として注入する
 if ($blueprintSecret) { $envVars += "BLUEPRINT_CLIENT_SECRET=secretref:blueprint-secret" }
 
-# ACR 名（RG 内に無ければ作成）。英数字のみ・グローバル一意にするため suffix を付与。
+# ACR は「その RG で共有する 1 つ」に集約する（冪等）。RG 内に既存があれば再利用、無ければ 1 つ作る。
+# 1) .env の ACA_ACR_NAME 明示 → 2) RG 内の既存 ACR を再利用 → 3) 決定的な名前で新規作成。
 $acrName = ($envMap['ACA_ACR_NAME'])
+if (-not $acrName) { $acrName = az acr list -g $ResourceGroup --query "[0].name" -o tsv 2>$null }
 if (-not $acrName) {
-    $suffix  = -join ((97..122) + (48..57) | Get-Random -Count 6 | ForEach-Object { [char]$_ })
-    $acrName = "acaagent$suffix"
+    $sha     = [System.Security.Cryptography.SHA256]::Create()
+    $bytes   = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$SubscriptionId/$ResourceGroup"))
+    $hash    = ([System.BitConverter]::ToString($bytes)).Replace('-', '').ToLower()
+    $acrName = "acaagent$($hash.Substring(0,10))"
 }
 $existingAcr = az acr show -n $acrName -g $ResourceGroup --query name -o tsv 2>$null
-if (-not $existingAcr) {
+if ($existingAcr) {
+    Write-Host "      ACR を再利用: $acrName (RG: $ResourceGroup)" -ForegroundColor DarkGray
+}
+else {
     Write-Host "      ACR を作成: $acrName" -ForegroundColor DarkGray
     az acr create -n $acrName -g $ResourceGroup --sku Basic --admin-enabled true --only-show-errors | Out-Null
 }
