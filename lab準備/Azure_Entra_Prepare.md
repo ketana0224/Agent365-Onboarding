@@ -310,8 +310,11 @@ $assignedPrincipals = $existing.principalId
 
 # 7.共有 App Insights の接続文字列を取得できるようにする（lab6）
 - lab6 のエージェントは APIM と**同一の共有 App Insights `<APPINSIGHTS_NAME>`（`<APPINSIGHTS_RESOURCE_GROUP>`）**へテレメトリを集約し、E2E トレースを成立させる。
-- lab6 の `scripts\00_generate-env.ps1` は、この共有 App Insights の接続文字列を `az` で自動取得して `.env` に焼き込む。**受講者ユーザーは共有 RG に権限が無いため取得に失敗する**ので、その App Insights リソース 1 個だけにスコープして **Reader（閲覧者）** を付与する。
-- 接続文字列の取得（`Microsoft.Insights/components/read`）に必要十分な最小権限。RG 全体ではなくリソース単位に絞る。
+- lab6 の `scripts\00_generate-env.ps1` は、この共有 App Insights の接続文字列を `az` で自動取得して `.env` に焼き込む。**受講者ユーザーは共有 RG に権限が無いため取得に失敗する**ので、その App Insights リソース 1 個だけにスコープして権限を付与する。
+- 付与するロールは 2 つ（いずれも App Insights リソース スコープ）:
+  - **Reader（閲覧者）** … 接続文字列の取得（`Microsoft.Insights/components/read`）に必要。
+  - **Monitoring Reader（監視閲覧者）** … lab6 §4.3 で **App Insights の Logs / トランザクション検索**を開いてトレースを見るために付与。共有 App Insights は**ワークスペース ベース**（`log-*` に格納）なので、Reader だけだと経路によっては Logs クエリが弾かれる。SP 側も Monitoring Reader を持っており、それに揃える。
+- RG 全体ではなくリソース単位に絞った最小権限。
 
 ```powershell
 # App Insights リソースID（このリソースだけにスコープ）
@@ -320,7 +323,8 @@ $aiId = az resource list -g $aiRg -n $aiName `
 if (-not $aiId) { throw "App Insights '$aiName' が $aiRg に見つかりません。" }
 Write-Host "対象 App Insights: $aiId"
 
-# === user01〜user12 に Reader（リソース スコープ）を付与 ===
+# === user01〜user12 に Reader + Monitoring Reader（リソース スコープ）を付与 ===
+$obsRoles = @("Reader", "Monitoring Reader")
 1..12 | ForEach-Object {
     $n   = "user{0:D2}" -f $_
     $upn = "$n@$domain"
@@ -331,15 +335,17 @@ Write-Host "対象 App Insights: $aiId"
         return
     }
 
-    az role assignment create `
-        --assignee-object-id $objectId `
-        --assignee-principal-type User `
-        --role "Reader" `
-        --scope "$aiId" `
-        --output none
+    foreach ($role in $obsRoles) {
+        az role assignment create `
+            --assignee-object-id $objectId `
+            --assignee-principal-type User `
+            --role "$role" `
+            --scope "$aiId" `
+            --output none
 
-    if ($LASTEXITCODE -eq 0) { Write-Host "付与: $upn -> $aiName (Reader)" }
-    else { Write-Warning "付与失敗: $upn -> $aiName" }
+        if ($LASTEXITCODE -eq 0) { Write-Host "付与: $upn -> $aiName ($role)" }
+        else { Write-Warning "付与失敗: $upn -> $aiName ($role)" }
+    }
 }
 ```
 

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import contextvars
 import json
+import os
 from contextlib import AsyncExitStack
 from typing import Annotated, Any, Optional
 
@@ -32,7 +33,15 @@ from agent_framework import tool
 from . import auth_meta, config
 from .agent_id_token import AgentIdTokenProvider
 
-AGENT_NAME = "custom-maf-agent-a365-obo"
+# gen_ai.agent.name（App Insights のガント／トランザクション検索に出る表示名）。
+# ACA が自動注入する CONTAINER_APP_NAME（= custom-maf-a365-obo-userNN）を使うことで、
+# ユーザーごとの追加設定なしに表示名へ userNN を出す。明示上書きしたい場合は AGENT_NAME を .env に設定。
+# どちらも無い（ローカル実行など）場合は従来どおりの固定名にフォールバック。
+AGENT_NAME = (
+    os.environ.get("AGENT_NAME")
+    or os.environ.get("CONTAINER_APP_NAME")
+    or "custom-maf-agent-a365-obo"
+)
 
 # ---------------------------------------------------------------------------
 # 共有 Credential（UAMI / DefaultAzureCredential）/ Agent ID プロバイダ
